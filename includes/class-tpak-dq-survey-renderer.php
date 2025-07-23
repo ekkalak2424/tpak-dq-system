@@ -22,6 +22,20 @@ class TPAK_DQ_Survey_Renderer {
         
         // เพิ่ม Meta Box ใหม่
         add_action('add_meta_boxes', array($this, 'add_survey_preview_metabox'), 15);
+        // Enqueue admin assets
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+    }
+
+    public function enqueue_admin_assets($hook) {
+        // เฉพาะหน้า post.php/post-new.php ของ tpak_verification
+        global $post;
+        if (($hook === 'post.php' || $hook === 'post-new.php') && isset($post) && $post->post_type === 'tpak_verification') {
+            wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.0', true);
+            wp_localize_script('tpak-admin-js', 'tpak_dq_vars', array(
+                'nonce' => wp_create_nonce('tpak_dq_nonce'),
+                'ajaxurl' => admin_url('admin-ajax.php')
+            ));
+        }
     }
     
     /**
@@ -53,6 +67,7 @@ class TPAK_DQ_Survey_Renderer {
         
         ?>
         <div class="tpak-survey-preview-wrapper">
+            <?php $refresh_nonce = wp_create_nonce('tpak_survey_nonce'); ?>
             <style>
                 .tpak-survey-preview {
                     background: #f8f9fa;
@@ -272,12 +287,19 @@ class TPAK_DQ_Survey_Renderer {
                     color: #7f8c8d;
                     font-size: 13px;
                 }
+
+                .tpak-mainquestion-label {
+                    font-weight: bold;
+                    color: #2c3e50;
+                    font-size: 14px;
+                }
             </style>
             
             <div class="tpak-survey-actions">
                 <button type="button" class="button button-primary tpak-refresh-button" 
                         data-survey-id="<?php echo esc_attr($survey_id); ?>"
-                        data-post-id="<?php echo esc_attr($post->ID); ?>">
+                        data-post-id="<?php echo esc_attr($post->ID); ?>"
+                        data-nonce="<?php echo esc_attr($refresh_nonce); ?>">
                     <span class="dashicons dashicons-update"></span>
                     ดึงคำถามจาก LimeSurvey
                 </button>
@@ -300,17 +322,56 @@ class TPAK_DQ_Survey_Renderer {
         </div>
         
         <script>
-        jQuery(document).ready(function($) {
-            // Refresh survey structure
-            $('.tpak-refresh-button').on('click', function() {
+        jQuery(document).ready(function($){
+            // Inline edit events (เดิม)
+            $(document).on('click', '.tpak-edit-inline', function(){
+                var key = $(this).data('key');
+                $('#answer-value-' + key).hide();
+                $('#answer-edit-' + key).show();
+            });
+            $(document).on('click', '.tpak-cancel-inline', function(){
+                var key = $(this).data('key');
+                $('#answer-edit-' + key).hide();
+                $('#answer-value-' + key).show();
+            });
+            $(document).on('click', '.tpak-save-inline', function(){
+                var key = $(this).data('key');
+                var row = $(this).closest('tr');
+                if (row.length === 0) {
+                    row = $(this).closest('.tpak-question-item');
+                }
+                var input = row.find('.tpak-inline-input');
+                var value = input.val();
+                var post_id = $('#post_ID').val();
+                var data = {
+                    action: 'tpak_auto_save_survey_data',
+                    nonce: tpak_dq_vars.nonce,
+                    post_id: post_id,
+                    survey_data: {}
+                };
+                data.survey_data[key] = value;
+                $.post(ajaxurl, data, function(resp){
+                    if(resp.success){
+                        var display = value;
+                        if (input.is('select')) {
+                            display = input.find('option:selected').text();
+                        }
+                        $('#answer-value-' + key).text(display).show();
+                        $('#answer-edit-' + key).hide();
+                    }else{
+                        alert('เกิดข้อผิดพลาด: ' + resp.data);
+                    }
+                });
+            });
+            // Restore refresh button event
+            $(document).on('click', '.tpak-refresh-button', function(){
                 var button = $(this);
                 var surveyId = button.data('survey-id');
                 var postId = button.data('post-id');
+                var nonce = button.data('nonce');
                 var container = $('#survey-preview-' + postId);
-                
                 button.prop('disabled', true).text('กำลังดึงข้อมูล...');
                 container.html('<div class="tpak-loading"><div class="spinner"></div>กำลังดึงคำถามจาก LimeSurvey...</div>');
-                
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
@@ -318,17 +379,13 @@ class TPAK_DQ_Survey_Renderer {
                         action: 'tpak_refresh_survey_structure',
                         survey_id: surveyId,
                         post_id: postId,
-                        nonce: '<?php echo wp_create_nonce('tpak_survey_nonce'); ?>'
+                        nonce: nonce
                     },
                     success: function(response) {
                         if (response.success) {
                             container.html(response.data.html);
                             button.html('<span class="dashicons dashicons-yes"></span> ดึงข้อมูลสำเร็จ');
-                            
-                            // Reload page after 2 seconds to show new data
-                            setTimeout(function() {
-                                location.reload();
-                            }, 2000);
+                            setTimeout(function() { location.reload(); }, 2000);
                         } else {
                             container.html('<p class="error">เกิดข้อผิดพลาด: ' + response.data + '</p>');
                             button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> ดึงคำถามจาก LimeSurvey');
@@ -399,8 +456,10 @@ class TPAK_DQ_Survey_Renderer {
         }
         
         try {
-            require_once TPAK_DQ_PLUGIN_DIR . 'includes/class-tpak-dq-import.php';
-            
+            // ใช้ไฟล์ backup ถ้าต้องการ
+            if (!class_exists('LimeSurveyAPIClient')) {
+                require_once TPAK_DQ_PLUGIN_DIR . 'includes/class-tpak-dq-import.php_backup';
+            }
             $this->api_client = new LimeSurveyAPIClient($api_url, $username, $password);
             $session_key = $this->api_client->get_session_key();
             
@@ -631,7 +690,8 @@ class TPAK_DQ_Survey_Renderer {
                 }
                 $questions_by_group[$gid][$q_code] = $q_data;
             }
-            
+            // เรียก group_questions_by_base แค่ครั้งเดียว
+            $question_groups = $this->group_questions_by_base($response_data);
             // แสดงตาม group
             foreach ($structure['groups'] as $gid => $group) {
                 if (!isset($questions_by_group[$gid])) continue;
@@ -641,10 +701,8 @@ class TPAK_DQ_Survey_Renderer {
                     <?php if (!empty($group['description'])): ?>
                         <p class="tpak-group-description"><?php echo nl2br(esc_html($group['description'])); ?></p>
                     <?php endif; ?>
-                    
                     <?php
                     foreach ($questions_by_group[$gid] as $q_code => $q_data) {
-                        $question_groups = $this->group_questions_by_base($response_data);
                         if (isset($question_groups[$q_code])) {
                             $this->render_question_group($q_code, $question_groups[$q_code], $q_data, $response_data);
                         }
@@ -925,52 +983,68 @@ class TPAK_DQ_Survey_Renderer {
                     <tr>
                         <th>รายการ</th>
                         <th>คำตอบ</th>
+                        <th>แก้ไข</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($items as $key => $value): ?>
+                    <?php 
+                        $display_key = str_replace($base_code, '', $key);
+                        $display_key = trim($display_key, '[]_');
+                        // ข้าม key ที่เป็นตัวเลขล้วน หรือไม่มี label subquestion (ถ้ามี subquestions)
+                        $skip = false;
+                        if (is_numeric($display_key)) {
+                            $skip = true;
+                        } elseif (isset($question_info['subquestions'])) {
+                            $parts = explode('_', $display_key);
+                            $sq_code = $parts[0];
+                            if (!isset($question_info['subquestions'][$display_key]) && !isset($question_info['subquestions'][$sq_code])) {
+                                $skip = true;
+                            }
+                        }
+                        if ($skip) continue;
+                    ?>
                     <tr>
                         <td>
                             <?php 
-                            // แยกส่วนประกอบของ key
-                            $display_key = str_replace($base_code, '', $key);
-                            $display_key = trim($display_key, '[]_');
-                            
-                            // พยายามแยก subquestion code และ answer code
-                            $parts = explode('_', $display_key);
-                            $sq_code = $parts[0];
-                            $ans_code = isset($parts[1]) ? $parts[1] : '';
-                            
-                            // แสดง subquestion text
-                            $displayed = false;
-                            if ($question_info && isset($question_info['subquestions'])) {
-                                // ลองหา subquestion ด้วย code เต็ม
-                                if (isset($question_info['subquestions'][$display_key])) {
-                                    echo '<span class="tpak-subquestion-label">' . 
-                                         esc_html($question_info['subquestions'][$display_key]['question']) . 
-                                         '</span>';
-                                    $displayed = true;
-                                } 
-                                // ลองหาด้วย sq_code
-                                elseif (isset($question_info['subquestions'][$sq_code])) {
-                                    echo '<span class="tpak-subquestion-label">' . 
-                                         esc_html($question_info['subquestions'][$sq_code]['question']) . 
-                                         '</span>';
-                                    if ($ans_code) {
-                                        echo ' <small>(' . esc_html($ans_code) . ')</small>';
-                                    }
-                                    $displayed = true;
+                            // ปรับ logic แสดง label/subquestion
+                            if ($key === $base_code) {
+                                // แสดง label คำถามหลัก
+                                if ($question_info && !empty($question_info['question'])) {
+                                    echo '<span class="tpak-mainquestion-label">' . esc_html(strip_tags($question_info['question'])) . '</span>';
+                                } else {
+                                    echo esc_html($base_code);
                                 }
-                            }
-                            
-                            if (!$displayed) {
-                                // ถ้าไม่พบ subquestion text ให้แสดง code
-                                echo esc_html($display_key ?: $base_code);
+                            } else {
+                                // แสดง label ของ subquestion
+                                $display_key = str_replace($base_code, '', $key);
+                                $display_key = trim($display_key, '[]_');
+                                $parts = explode('_', $display_key);
+                                $sq_code = $parts[0];
+                                $ans_code = isset($parts[1]) ? $parts[1] : '';
+                                $displayed = false;
+                                if ($question_info && isset($question_info['subquestions'])) {
+                                    // ลองหา subquestion ด้วย code เต็ม
+                                    if (isset($question_info['subquestions'][$display_key])) {
+                                        echo '<span class="tpak-subquestion-label">' . esc_html($question_info['subquestions'][$display_key]['question']) . '</span>';
+                                        $displayed = true;
+                                    } elseif (isset($question_info['subquestions'][$sq_code])) {
+                                        echo '<span class="tpak-subquestion-label">' . esc_html($question_info['subquestions'][$sq_code]['question']) . '</span>';
+                                        if ($ans_code) {
+                                            echo ' <small>(' . esc_html($ans_code) . ')</small>';
+                                        }
+                                        $displayed = true;
+                                    }
+                                }
+                                if (!$displayed) {
+                                    // ถ้าไม่พบ subquestion text ให้แสดง key ที่ตัด prefix แล้ว
+                                    echo esc_html($display_key);
+                                }
                             }
                             ?>
                         </td>
                         <td>
-                            <strong>
+                            <span class="tpak-answer-value" id="answer-value-<?php echo esc_attr($key); ?>">
                                 <?php 
                                 // แสดงคำตอบ
                                 if ($is_multiple_choice && $question_info && isset($question_info['answer_options'])) {
@@ -1001,7 +1075,31 @@ class TPAK_DQ_Survey_Renderer {
                                     echo esc_html($this->format_answer_value($value, $base_code, $question_info));
                                 }
                                 ?>
-                            </strong>
+                            </span>
+                            <span class="tpak-answer-edit" id="answer-edit-<?php echo esc_attr($key); ?>" style="display:none;">
+                                <?php
+                                // เลือก input type ตามชนิดคำถาม
+                                $input_name = 'tpak_survey_data[' . esc_attr($key) . ']';
+                                $input_value = esc_attr($value);
+                                if ($question_info && isset($question_info['answer_options']) && is_array($question_info['answer_options'])) {
+                                    echo '<select name="' . $input_name . '" class="tpak-inline-input">';
+                                    foreach ($question_info['answer_options'] as $opt_val => $opt_label) {
+                                        $selected = ($opt_val == $value) ? 'selected' : '';
+                                        echo '<option value="' . esc_attr($opt_val) . '" ' . $selected . '>' . esc_html($opt_label) . '</option>';
+                                    }
+                                    echo '</select>';
+                                } elseif (strlen($value) > 100) {
+                                    echo '<textarea name="' . $input_name . '" class="tpak-inline-input">' . esc_textarea($value) . '</textarea>';
+                                } else {
+                                    echo '<input type="text" name="' . $input_name . '" value="' . $input_value . '" class="tpak-inline-input" />';
+                                }
+                                ?>
+                                <button type="button" class="button button-primary tpak-save-inline" data-key="<?php echo esc_attr($key); ?>">บันทึก</button>
+                                <button type="button" class="button tpak-cancel-inline" data-key="<?php echo esc_attr($key); ?>">ยกเลิก</button>
+                            </span>
+                        </td>
+                        <td>
+                            <button type="button" class="button tpak-edit-inline" data-key="<?php echo esc_attr($key); ?>">แก้ไข</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -1310,14 +1408,35 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงคำตอบเดี่ยว
      */
     private function render_single_answer($value, $question_code = '', $question_info = null) {
+        $key = $question_code;
         if (empty($value) || $value === 'N') {
             echo '<div class="tpak-answer-empty">ไม่มีคำตอบ</div>';
             return;
         }
-        
-        echo '<div class="tpak-answer-value">';
-        echo nl2br(esc_html($this->format_answer_value($value, $question_code, $question_info)));
-        echo '</div>';
+        ?>
+        <span class="tpak-answer-value" id="answer-value-<?php echo esc_attr($key); ?>"><?php echo nl2br(esc_html($this->format_answer_value($value, $question_code, $question_info))); ?></span>
+        <span class="tpak-answer-edit" id="answer-edit-<?php echo esc_attr($key); ?>" style="display:none;">
+            <?php
+            $input_name = 'tpak_survey_data[' . esc_attr($key) . ']';
+            $input_value = esc_attr($value);
+            if ($question_info && isset($question_info['answer_options']) && is_array($question_info['answer_options'])) {
+                echo '<select name="' . $input_name . '" class="tpak-inline-input">';
+                foreach ($question_info['answer_options'] as $opt_val => $opt_label) {
+                    $selected = ($opt_val == $value) ? 'selected' : '';
+                    echo '<option value="' . esc_attr($opt_val) . '" ' . $selected . '>' . esc_html($opt_label) . '</option>';
+                }
+                echo '</select>';
+            } elseif (strlen($value) > 100) {
+                echo '<textarea name="' . $input_name . '" class="tpak-inline-input">' . esc_textarea($value) . '</textarea>';
+            } else {
+                echo '<input type="text" name="' . $input_name . '" value="' . $input_value . '" class="tpak-inline-input" />';
+            }
+            ?>
+            <button type="button" class="button button-primary tpak-save-inline" data-key="<?php echo esc_attr($key); ?>">บันทึก</button>
+            <button type="button" class="button tpak-cancel-inline" data-key="<?php echo esc_attr($key); ?>">ยกเลิก</button>
+        </span>
+        <button type="button" class="button tpak-edit-inline" data-key="<?php echo esc_attr($key); ?>">แก้ไข</button>
+        <?php
     }
     
     /**

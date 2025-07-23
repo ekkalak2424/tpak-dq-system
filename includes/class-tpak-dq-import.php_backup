@@ -719,6 +719,52 @@ class LimeSurveyAPIClient {
         
         $this->send_request($params);
     }
+
+    public function get_survey_properties($session_key, $survey_id, $properties = null) {
+        $params = array(
+            'method' => 'get_survey_properties',
+            'params' => array($session_key, intval($survey_id), $properties),
+            'id' => 1
+        );
+        $response = $this->send_request($params);
+        return isset($response['result']) ? $response['result'] : null;
+    }
+    public function list_groups($session_key, $survey_id) {
+        $params = array(
+            'method' => 'list_groups',
+            'params' => array($session_key, intval($survey_id)),
+            'id' => 1
+        );
+        $response = $this->send_request($params);
+        return isset($response['result']) ? $response['result'] : array();
+    }
+    public function list_questions($session_key, $survey_id, $group_id = null, $language = null) {
+        $params = array(
+            'method' => 'list_questions',
+            'params' => array($session_key, intval($survey_id), $group_id, $language),
+            'id' => 1
+        );
+        $response = $this->send_request($params);
+        return isset($response['result']) ? $response['result'] : array();
+    }
+    public function get_question_properties($session_key, $question_id, $properties = null, $language = null) {
+        $params = array(
+            'method' => 'get_question_properties',
+            'params' => array($session_key, intval($question_id), $properties, $language),
+            'id' => 1
+        );
+        $response = $this->send_request($params);
+        return isset($response['result']) ? $response['result'] : null;
+    }
+    public function get_language_properties($session_key, $survey_id, $language = null) {
+        $params = array(
+            'method' => 'get_language_properties',
+            'params' => array($session_key, intval($survey_id), null, $language),
+            'id' => 1
+        );
+        $response = $this->send_request($params);
+        return isset($response['result']) ? $response['result'] : null;
+    }
     
     public function send_request($params) {
         $ch = curl_init();
