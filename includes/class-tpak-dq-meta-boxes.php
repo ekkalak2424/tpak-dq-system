@@ -708,7 +708,8 @@ class TPAK_DQ_Meta_Boxes {
         
         // Merge with new data
         foreach ($survey_data as $key => $value) {
-            $existing_data[sanitize_key($key)] = sanitize_textarea_field($value);
+            $norm_key = $this->normalize_survey_key($key);
+            $existing_data[$norm_key] = sanitize_textarea_field($value);
         }
         
         // Save data
@@ -843,5 +844,14 @@ class TPAK_DQ_Meta_Boxes {
         );
         
         return isset($labels[$status]) ? $labels[$status] : 'ไม่ทราบสถานะ';
+    }
+
+    // Utility: normalize survey key (copy from renderer)
+    private function normalize_survey_key($key) {
+        $key = trim($key);
+        $key = preg_replace('/\s+/', '', $key);
+        $key = preg_replace('/\[([0-9_]+)\]/', '[$1]', $key);
+        $key = rtrim($key, '_');
+        return $key;
     }
 }

@@ -643,42 +643,16 @@ class TPAK_DQ_Survey_Renderer {
             $this->render_survey_with_answers($response_data);
             return;
         }
-        
-        // ตรวจสอบว่ามี saved structure หรือไม่
-        $survey_id = isset($structure['survey_id']) ? $structure['survey_id'] : '';
-        if ($survey_id && class_exists('TPAK_DQ_Survey_Structure_Manager')) {
-            $saved_structure = TPAK_DQ_Survey_Structure_Manager::get_survey_structure($survey_id);
-            if ($saved_structure) {
-                // ใช้ saved structure แทน
-                $structure = array_merge($structure, $saved_structure);
-                error_log('TPAK Debug: Using saved survey structure for survey ' . $survey_id);
-            }
-        }
-        
         // เก็บ structure ไว้ใช้
         $this->question_labels = isset($structure['questions']) ? $structure['questions'] : array();
         $this->answer_options = isset($structure['answers']) ? $structure['answers'] : array();
-        
         ?>
         <div class="tpak-survey-header">
             <h2 class="tpak-survey-title"><?php echo esc_html($structure['title']); ?></h2>
             <?php if (!empty($structure['description'])): ?>
                 <div class="tpak-survey-description"><?php echo nl2br(esc_html($structure['description'])); ?></div>
             <?php endif; ?>
-            <div class="tpak-survey-stats">
-                <div class="tpak-stat-item">
-                    <span class="dashicons dashicons-editor-help"></span>
-                    <span>จำนวนคำถาม: <span class="tpak-stat-number"><?php echo count($structure['questions']); ?></span></span>
-                </div>
-                <?php if (isset($structure['last_updated'])): ?>
-                <div class="tpak-stat-item">
-                    <span class="dashicons dashicons-update"></span>
-                    <span>อัพเดท: <span class="tpak-stat-number"><?php echo date_i18n('d/m/Y H:i', strtotime($structure['last_updated'])); ?></span></span>
-                </div>
-                <?php endif; ?>
-            </div>
         </div>
-        
         <?php if (isset($structure['groups']) && !empty($structure['groups'])): ?>
             <?php
             // จัดกลุ่มคำถามตาม group
@@ -690,9 +664,6 @@ class TPAK_DQ_Survey_Renderer {
                 }
                 $questions_by_group[$gid][$q_code] = $q_data;
             }
-            // เรียก group_questions_by_base แค่ครั้งเดียว
-            $question_groups = $this->group_questions_by_base($response_data);
-            // แสดงตาม group
             foreach ($structure['groups'] as $gid => $group) {
                 if (!isset($questions_by_group[$gid])) continue;
                 ?>
@@ -703,9 +674,40 @@ class TPAK_DQ_Survey_Renderer {
                     <?php endif; ?>
                     <?php
                     foreach ($questions_by_group[$gid] as $q_code => $q_data) {
-                        if (isset($question_groups[$q_code])) {
-                            $this->render_question_group($q_code, $question_groups[$q_code], $q_data, $response_data);
+                        // หาข้อมูลคำถามหลัก
+                        $question_info = $q_data;
+                        // เพิ่ม subquestions ถ้ามี
+                        if (isset($structure['subquestions'][$q_code])) {
+                            $question_info['subquestions'] = $structure['subquestions'][$q_code];
                         }
+                        // เพิ่ม answer options ถ้ามี
+                        if (isset($structure['answer_options'][$q_code])) {
+                            $question_info['answer_options'] = $structure['answer_options'][$q_code];
+                        } elseif (isset($structure['answers'][$q_code])) {
+                            $question_info['answer_options'] = array();
+                            foreach ($structure['answers'][$q_code] as $code => $answer_data) {
+                                if (is_array($answer_data)) {
+                                    $question_info['answer_options'][$code] = $answer_data['answer'];
+                                } else {
+                                    $question_info['answer_options'][$code] = $answer_data;
+                                }
+                            }
+                        }
+                        // แสดงคำถามและคำตอบทีละข้อ (ไม่ group ทุกอย่างเป็น subquestion ของ Q1)
+                        $items = array();
+                        if (isset($response_data[$q_code])) {
+                            $items[$q_code] = $response_data[$q_code];
+                        } else {
+                            // หา subquestion/array
+                            foreach ($response_data as $k => $v) {
+                                if (strpos($k, $q_code . '[') === 0 && !empty($v) && $v !== 'N') {
+                                    $items[$k] = $v;
+                                }
+                            }
+                        }
+                        $group_type = (count($items) > 1) ? 'array' : 'single';
+                        $group_data = array('type' => $group_type, 'items' => $items);
+                        $this->render_question_group($q_code, $group_data, $question_info, $response_data);
                     }
                     ?>
                 </div>
@@ -715,29 +717,17 @@ class TPAK_DQ_Survey_Renderer {
         <?php else: ?>
             <div class="tpak-question-group">
                 <h3 class="tpak-group-title">คำถามและคำตอบ</h3>
-                
                 <?php
-                // จัดกลุ่มคำถามที่มี subquestions
-                $processed_questions = array();
-                $question_groups = $this->group_questions_by_base($response_data);
-                
-                // แสดงคำถามแบบจัดกลุ่ม
-                foreach ($question_groups as $base_code => $group_data) {
-                    // หาข้อมูลคำถามหลัก
-                    $question_info = $this->find_question_info($base_code, $structure['questions']);
-                    
-                    // เพิ่ม subquestions ถ้ามี
-                    if (isset($structure['subquestions'][$base_code])) {
-                        $question_info['subquestions'] = $structure['subquestions'][$base_code];
+                foreach ($structure['questions'] as $q_code => $q_data) {
+                    $question_info = $q_data;
+                    if (isset($structure['subquestions'][$q_code])) {
+                        $question_info['subquestions'] = $structure['subquestions'][$q_code];
                     }
-                    
-                    // เพิ่ม answer options ถ้ามี
-                    if (isset($structure['answer_options'][$base_code])) {
-                        $question_info['answer_options'] = $structure['answer_options'][$base_code];
-                    } elseif (isset($structure['answers'][$base_code])) {
-                        // Support both formats
+                    if (isset($structure['answer_options'][$q_code])) {
+                        $question_info['answer_options'] = $structure['answer_options'][$q_code];
+                    } elseif (isset($structure['answers'][$q_code])) {
                         $question_info['answer_options'] = array();
-                        foreach ($structure['answers'][$base_code] as $code => $answer_data) {
+                        foreach ($structure['answers'][$q_code] as $code => $answer_data) {
                             if (is_array($answer_data)) {
                                 $question_info['answer_options'][$code] = $answer_data['answer'];
                             } else {
@@ -745,9 +735,19 @@ class TPAK_DQ_Survey_Renderer {
                             }
                         }
                     }
-                    
-                    // แสดงคำถามและคำตอบทั้งกลุ่ม
-                    $this->render_question_group($base_code, $group_data, $question_info, $response_data);
+                    $items = array();
+                    if (isset($response_data[$q_code])) {
+                        $items[$q_code] = $response_data[$q_code];
+                    } else {
+                        foreach ($response_data as $k => $v) {
+                            if (strpos($k, $q_code . '[') === 0 && !empty($v) && $v !== 'N') {
+                                $items[$k] = $v;
+                            }
+                        }
+                    }
+                    $group_type = (count($items) > 1) ? 'array' : 'single';
+                    $group_data = array('type' => $group_type, 'items' => $items);
+                    $this->render_question_group($q_code, $group_data, $question_info, $response_data);
                 }
                 ?>
             </div>
@@ -953,10 +953,27 @@ class TPAK_DQ_Survey_Renderer {
         <?php
     }
     
+    // Normalize subquestion key (สำหรับเปรียบเทียบ key array/subquestion)
+    private function normalize_subq_key($key) {
+        return preg_replace('/[^A-Za-z0-9]/', '', $key);
+    }
+
     /**
      * แสดงคำตอบแบบ array ที่จัดกลุ่มแล้ว
      */
     private function render_grouped_array_answers($base_code, $items, $question_info = null) {
+        // Filter items เฉพาะ key ที่ตรงกับ subquestion จริง (normalize ทั้งสองฝั่ง)
+        if ($question_info && isset($question_info['subquestions']) && is_array($question_info['subquestions'])) {
+            $subq_keys = array_map(function($k) { return $this->normalize_subq_key($k); }, array_keys($question_info['subquestions']));
+            $filtered_items = array();
+            foreach ($items as $key => $value) {
+                $display_key = $this->normalize_subq_key(str_replace($base_code, '', $key));
+                if (in_array($display_key, $subq_keys)) {
+                    $filtered_items[$key] = $value;
+                }
+            }
+            $items = $filtered_items;
+        }
         // ตรวจสอบว่าเป็นคำถามแบบ Multiple Choice Array หรือไม่
         $is_multiple_choice = false;
         $all_numeric_values = true;
