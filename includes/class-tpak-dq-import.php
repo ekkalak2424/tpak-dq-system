@@ -480,12 +480,13 @@ class TPAK_DQ_Import {
                 );
             }
             
-            // Get survey responses
-            $responses = $client->export_responses($session_key, $survey_id, 'json', null, 'all');
+            // Get survey responses (ส่งช่วงวันที่ไปยัง API)
+            $responses = $client->export_responses($session_key, $survey_id, 'json', null, 'all', $start_date, $end_date);
             
             // Debug
             error_log('TPAK Debug: Import survey ' . $survey_id);
             error_log('TPAK Debug: Response type = ' . gettype($responses));
+            error_log('TPAK Debug: Raw API response = ' . print_r($responses, true));
             
             // Check if we got valid data
             if (!is_array($responses)) {
@@ -506,32 +507,21 @@ class TPAK_DQ_Import {
                 // ตรวจสอบว่า response มี structure แบบไหน
                 if (isset($responses['responses'])) {
                     $responses = $responses['responses'];
+                    error_log('TPAK Debug: Number of responses in [responses] = ' . count($responses));
+                    if (!empty($responses)) {
+                        error_log('TPAK Debug: Sample response = ' . print_r($responses[0], true));
+                    }
                 }
                 
-                foreach ($responses as $response) {
+                foreach ($responses as $idx => $response) {
                     try {
                         // Skip if not array
                         if (!is_array($response)) {
                             continue;
                         }
-                        
-                        // ตรวจสอบว่ามี ID หรือไม่
-                        $response_id = null;
-                        if (isset($response['id'])) {
-                            $response_id = $response['id'];
-                        } elseif (isset($response['tid'])) {
-                            $response_id = $response['tid'];
-                        } elseif (isset($response['token'])) {
-                            $response_id = $response['token'];
-                        } elseif (isset($response['submitdate'])) {
-                            // ใช้ submitdate + survey_id เป็น unique identifier
-                            $response_id = $survey_id . '_' . strtotime($response['submitdate']);
-                        } else {
-                            // ใช้ index + timestamp ถ้าไม่มี ID
-                            static $index = 0;
-                            $response_id = $survey_id . '_' . time() . '_' . $index++;
-                        }
-                        
+                        // ใช้ response_id แบบ unique เสมอ
+                        $response_id = $survey_id . '_' . $idx;
+                        error_log('TPAK Debug: Importing response index ' . $idx . ' with response_id = ' . $response_id);
                         // Check if already imported
                         $existing = get_posts(array(
                             'post_type' => 'tpak_verification',
@@ -656,7 +646,7 @@ class LimeSurveyAPIClient {
         return false;
     }
     
-    public function export_responses($session_key, $survey_id, $format = 'json', $language = null, $completion = 'all') {
+    public function export_responses($session_key, $survey_id, $format = 'json', $language = null, $completion = 'all', $from = null, $to = null) {
         $params = array(
             'method' => 'export_responses',
             'params' => array(
@@ -665,8 +655,8 @@ class LimeSurveyAPIClient {
                 $format,
                 $language,
                 $completion,
-                null, // from
-                null, // to
+                $from, // ส่งวันที่เริ่มต้น
+                $to,   // ส่งวันที่สิ้นสุด
                 null  // fields
             ),
             'id' => 1
