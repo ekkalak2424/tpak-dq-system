@@ -39,26 +39,209 @@ class TPAK_DQ_Dashboard {
         $current_user = wp_get_current_user();
         $user_role = $this->get_user_tpak_role();
         ?>
-        <div class="wrap">
-            <h1>TPAK DQ Dashboard</h1>
-            
-            <div class="welcome-panel">
-                <div class="welcome-panel-content">
-                    <h2>ยินดีต้อนรับ, <?php echo esc_html($current_user->display_name); ?></h2>
-                    <p class="about-description">
-                        Role ของคุณ: <strong><?php echo $this->get_role_display_name($user_role); ?></strong>
-                    </p>
+        <div class="wrap tpak-dashboard">
+            <div class="tpak-welcome-card">
+                <div class="tpak-welcome-content">
+                    <div class="tpak-welcome-icon">👋</div>
+                    <div class="tpak-welcome-text">
+                        <h2>ยินดีต้อนรับ, <?php echo esc_html($current_user->display_name); ?></h2>
+                        <p class="tpak-role-badge"><?php echo $this->get_role_display_name($user_role); ?></p>
+                    </div>
                 </div>
             </div>
             
             <?php $this->render_statistics($user_role); ?>
             
-            <?php $this->render_recent_activities($user_role); ?>
-            
-            <?php if (in_array($user_role, array('supervisor', 'examiner', 'admin'))): ?>
-                <?php $this->render_pending_reviews($user_role); ?>
-            <?php endif; ?>
+            <div class="tpak-dashboard-columns">
+                <div class="tpak-dashboard-left">
+                    <?php $this->render_recent_activities($user_role); ?>
+                </div>
+                <div class="tpak-dashboard-right">
+                    <?php if (in_array($user_role, array('supervisor', 'examiner', 'admin', 'interviewer'))): ?>
+                        <?php $this->render_pending_reviews($user_role); ?>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
+        
+        <style>
+        .tpak-dashboard {
+            padding: 20px;
+            background: #f0f0f1;
+            min-height: 100vh;
+        }
+        
+        .tpak-welcome-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .tpak-welcome-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .tpak-welcome-icon {
+            font-size: 3em;
+            opacity: 0.9;
+        }
+        
+        .tpak-welcome-text h2 {
+            margin: 0 0 8px 0;
+            font-size: 2em;
+            font-weight: 300;
+        }
+        
+        .tpak-role-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 0;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .tpak-statistics {
+            margin-bottom: 24px;
+        }
+        
+        .tpak-statistics h3 {
+            margin-bottom: 16px;
+            font-size: 1.5em;
+            color: #1d2327;
+        }
+        
+        .stat-boxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .stat-box {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-left: 4px solid #0073aa;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #0073aa;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .tpak-dashboard-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        .tpak-dashboard-left,
+        .tpak-dashboard-right {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .tpak-recent-activities h3,
+        .tpak-pending-reviews h3 {
+            margin-bottom: 16px;
+            font-size: 1.3em;
+            color: #1d2327;
+            border-bottom: 2px solid #f0f0f1;
+            padding-bottom: 8px;
+        }
+        
+        .tpak-recent-activities table,
+        .tpak-pending-reviews table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        .tpak-recent-activities th,
+        .tpak-pending-reviews th {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #1d2327;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tpak-recent-activities td,
+        .tpak-pending-reviews td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #f0f0f1;
+        }
+        
+        .tpak-recent-activities tr:hover,
+        .tpak-pending-reviews tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .tpak-recent-activities a,
+        .tpak-pending-reviews a {
+            color: #0073aa;
+            text-decoration: none;
+        }
+        
+        .tpak-recent-activities a:hover,
+        .tpak-pending-reviews a:hover {
+            text-decoration: underline;
+        }
+        
+        .tpak-pending-reviews .button {
+            background: #0073aa;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .tpak-pending-reviews .button:hover {
+            background: #005a87;
+        }
+        
+        @media (max-width: 768px) {
+            .tpak-dashboard-columns {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-boxes {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .tpak-welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+        </style>
         <?php
     }
     
@@ -171,6 +354,8 @@ class TPAK_DQ_Dashboard {
                 'value' => 'pending_b',
                 'compare' => '='
             );
+        } else if ($user_role === 'interviewer') {
+            $args['author'] = get_current_user_id();
         }
         
         $query = new WP_Query($args);
@@ -272,9 +457,11 @@ class TPAK_DQ_Dashboard {
         
         $user_role = $this->get_user_tpak_role();
         
-        // Filter based on role - Interviewer sees only their posts
-        if ($user_role === 'interviewer') {
-            $query->set('author', get_current_user_id());
+        // Filter based on role - Interviewer sees only their posts by default
+        // But allow them to see all posts when no specific author filter is set
+        if ($user_role === 'interviewer' && !isset($_GET['author'])) {
+            // Don't restrict to own posts by default - let them see all
+            // The "ของฉัน" filter will handle showing only their posts when needed
         }
         
         // Handle custom orderby

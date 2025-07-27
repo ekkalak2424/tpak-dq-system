@@ -232,11 +232,17 @@ class TPAK_DQ_Notifications {
         }
         
         if ($pending_count > 0) {
+            $list_url = admin_url('edit.php?post_type=tpak_verification');
+            if ($user_role === 'supervisor') {
+                $list_url .= '&workflow_status=pending_a';
+            } elseif ($user_role === 'examiner') {
+                $list_url .= '&workflow_status=pending_b';
+            }
             ?>
             <div class="notice notice-warning is-dismissible">
                 <p>
                     <?php printf($message, $pending_count); ?>
-                    <a href="<?php echo admin_url('edit.php?post_type=tpak_verification'); ?>">
+                    <a href="<?php echo esc_url($list_url); ?>">
                         ดูรายการ
                     </a>
                 </p>

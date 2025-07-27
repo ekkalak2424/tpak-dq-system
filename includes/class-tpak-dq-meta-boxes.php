@@ -273,7 +273,7 @@ class TPAK_DQ_Meta_Boxes {
             <?php 
             // สำหรับ Interviewer ต้องเป็นเจ้าของ post เท่านั้น
             $can_update = false;
-            if ($current_role === 'tpak_interviewer') {
+            if ($current_role === 'interviewer') {
                 if ($is_post_author && $this->can_update_status($current_role, $current_status)) {
                     $can_update = true;
                 }
@@ -290,7 +290,7 @@ class TPAK_DQ_Meta_Boxes {
             <?php else: ?>
             <p style="color: #666; font-style: italic; font-size: 13px;">
                 <?php 
-                if ($current_role === 'tpak_interviewer' && !$is_post_author) {
+                if ($current_role === 'interviewer' && !$is_post_author) {
                     echo 'คุณสามารถแก้ไขได้เฉพาะข้อมูลที่คุณสร้างเท่านั้น';
                 } else {
                     echo 'คุณไม่มีสิทธิ์เปลี่ยนสถานะในขั้นตอนนี้';
@@ -484,13 +484,13 @@ class TPAK_DQ_Meta_Boxes {
         $user = wp_get_current_user();
         
         if (in_array('tpak_examiner', $user->roles)) {
-            return 'tpak_examiner';
+            return 'examiner';
         } elseif (in_array('tpak_supervisor', $user->roles)) {
-            return 'tpak_supervisor';
+            return 'supervisor';
         } elseif (in_array('tpak_interviewer', $user->roles)) {
-            return 'tpak_interviewer';
+            return 'interviewer';
         } elseif (in_array('administrator', $user->roles)) {
-            return 'administrator';
+            return 'admin';
         }
         
         return '';
@@ -507,10 +507,10 @@ class TPAK_DQ_Meta_Boxes {
         
         // แก้ไขให้ map role ที่ถูกต้อง
         $mapped_role = $role;
-        if ($role === 'tpak_interviewer') $mapped_role = 'interviewer';
-        if ($role === 'tpak_supervisor') $mapped_role = 'supervisor';
-        if ($role === 'tpak_examiner') $mapped_role = 'examiner';
-        if ($role === 'administrator') $mapped_role = 'admin';
+        if ($role === 'interviewer') $mapped_role = 'interviewer';
+        if ($role === 'supervisor') $mapped_role = 'supervisor';
+        if ($role === 'examiner') $mapped_role = 'examiner';
+        if ($role === 'admin') $mapped_role = 'admin';
         
         return isset($permissions[$mapped_role]) && in_array($current_status, $permissions[$mapped_role]);
     }
@@ -520,10 +520,10 @@ class TPAK_DQ_Meta_Boxes {
         
         // แก้ไขให้ map role ที่ถูกต้อง
         $mapped_role = $role;
-        if ($role === 'tpak_interviewer') $mapped_role = 'interviewer';
-        if ($role === 'tpak_supervisor') $mapped_role = 'supervisor';
-        if ($role === 'tpak_examiner') $mapped_role = 'examiner';
-        if ($role === 'administrator') $mapped_role = 'admin';
+        if ($role === 'interviewer') $mapped_role = 'interviewer';
+        if ($role === 'supervisor') $mapped_role = 'supervisor';
+        if ($role === 'examiner') $mapped_role = 'examiner';
+        if ($role === 'admin') $mapped_role = 'admin';
         
         switch ($mapped_role) {
             case 'interviewer':
