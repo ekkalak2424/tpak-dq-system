@@ -59,6 +59,7 @@ class TPAK_DQ_System {
             'includes/class-tpak-dq-cache-manager.php',
             'includes/class-tpak-dq-performance-monitor.php',
             'includes/class-tpak-dq-lazy-loader.php',
+            'includes/class-tpak-dq-limesurvey-api.php',
         );
         
         foreach ($files as $file) {

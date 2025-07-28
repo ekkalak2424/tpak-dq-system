@@ -94,8 +94,57 @@ class TPAK_DQ_Survey_Structure_Manager {
             <hr />
             
             <div class="tpak-structure-section">
-                <h2>วิธีที่ 2: Sync จาก API</h2>
+                <h2>วิธีที่ 2: Sync จาก LimeSurvey API</h2>
                 <p>ดึงโครงสร้างจาก LimeSurvey API โดยตรง</p>
+                
+                <?php if (class_exists('TPAK_DQ_LimeSurvey_API')): ?>
+                    <?php
+                    $api = new TPAK_DQ_LimeSurvey_API();
+                    $api_url = get_option('tpak_limesurvey_api_url', '');
+                    $username = get_option('tpak_limesurvey_username', '');
+                    ?>
+                    
+                    <?php if (!empty($api_url) && !empty($username)): ?>
+                        <div class="tpak-api-status">
+                            <p><strong>API Status:</strong> 
+                                <span class="tpak-status-connected">✅ Connected</span>
+                                <a href="<?php echo admin_url('edit.php?post_type=tpak_verification&page=tpak-api-settings'); ?>" class="button button-small">Manage API Settings</a>
+                            </p>
+                        </div>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th><label for="api_survey_id">Survey ID</label></th>
+                                <td>
+                                    <input type="number" name="api_survey_id" id="api_survey_id" class="regular-text" required />
+                                    <p class="description">ระบุ Survey ID ที่ต้องการดึงจาก LimeSurvey API</p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <p class="submit">
+                            <button type="button" class="button button-primary" id="sync-from-api">Sync จาก API</button>
+                            <button type="button" class="button button-secondary" id="test-api-connection">Test API Connection</button>
+                        </p>
+                        
+                        <div id="api-sync-result" style="display:none;"></div>
+                    <?php else: ?>
+                        <div class="tpak-api-status">
+                            <p><strong>API Status:</strong> 
+                                <span class="tpak-status-disconnected">❌ Not Configured</span>
+                            </p>
+                            <p>กรุณาตั้งค่า LimeSurvey API ก่อนใช้งาน</p>
+                            <a href="<?php echo admin_url('edit.php?post_type=tpak_verification&page=tpak-api-settings'); ?>" class="button button-primary">Configure API Settings</a>
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="tpak-api-status">
+                        <p><strong>API Status:</strong> 
+                            <span class="tpak-status-error">❌ API Connector Not Available</span>
+                        </p>
+                        <p>LimeSurvey API Connector ไม่พร้อมใช้งาน</p>
+                    </div>
+                <?php endif; ?>
                 
                 <table class="form-table">
                     <tr>
@@ -484,8 +533,120 @@ class TPAK_DQ_Survey_Structure_Manager {
                 // Implementation for delete
                 // ...
             });
+            
+            // Sync from API
+            $('#sync-from-api').on('click', function() {
+                var surveyId = $('#api_survey_id').val();
+                var button = $(this);
+                var resultDiv = $('#api-sync-result');
+                
+                if (!surveyId) {
+                    alert('กรุณาระบุ Survey ID');
+                    return;
+                }
+                
+                button.prop('disabled', true).text('Syncing...');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'tpak_sync_survey_structure',
+                        survey_id: surveyId,
+                        nonce: '<?php echo wp_create_nonce('tpak_sync_structure'); ?>'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            resultDiv.html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+                            // Reload page after successful sync
+                            setTimeout(function() {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            resultDiv.html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
+                        }
+                        resultDiv.show();
+                    },
+                    error: function() {
+                        resultDiv.html('<div class="notice notice-error"><p>Failed to sync from API</p></div>');
+                        resultDiv.show();
+                    },
+                    complete: function() {
+                        button.prop('disabled', false).text('Sync จาก API');
+                    }
+                });
+            });
+            
+            // Test API connection
+            $('#test-api-connection').on('click', function() {
+                var button = $(this);
+                var resultDiv = $('#api-sync-result');
+                
+                button.prop('disabled', true).text('Testing...');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'tpak_test_api_connection',
+                        nonce: '<?php echo wp_create_nonce('tpak_test_api'); ?>'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            resultDiv.html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+                        } else {
+                            resultDiv.html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
+                        }
+                        resultDiv.show();
+                    },
+                    error: function() {
+                        resultDiv.html('<div class="notice notice-error"><p>API connection test failed</p></div>');
+                        resultDiv.show();
+                    },
+                    complete: function() {
+                        button.prop('disabled', false).text('Test API Connection');
+                    }
+                });
+            });
         });
         </script>
+        
+        <style>
+        .tpak-structure-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fff;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+        }
+        
+        .tpak-api-status {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007cba;
+        }
+        
+        .tpak-status-connected {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .tpak-status-disconnected {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .tpak-status-error {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        
+        #api-sync-result {
+            margin-top: 15px;
+        }
+        </style>
         <?php
     }
     
@@ -528,30 +689,37 @@ class TPAK_DQ_Survey_Structure_Manager {
             wp_send_json_error('Invalid Survey ID');
         }
         
-        // Use existing survey renderer to fetch structure
-        $renderer = new TPAK_DQ_Survey_Renderer();
-        $structure = $renderer->fetch_survey_structure($survey_id);
-        
-        if ($structure) {
-            // Convert to our format
-            $converted = array(
-                'survey_id' => $survey_id,
-                'groups' => array(),
-                'questions' => $structure['questions'] ?? array(),
-                'subquestions' => $structure['subquestions'] ?? array(),
-                'answers' => $structure['answer_options'] ?? array(),
-                'attributes' => array(),
-                'last_updated' => current_time('mysql')
-            );
+        // Use LimeSurvey API to fetch structure
+        if (class_exists('TPAK_DQ_LimeSurvey_API')) {
+            $api = new TPAK_DQ_LimeSurvey_API();
+            $structure = $api->get_survey_structure($survey_id);
             
-            $this->save_survey_structure($survey_id, $converted);
-            
-            wp_send_json_success(array(
-                'message' => 'Sync โครงสร้างสำเร็จ',
-                'survey_id' => $survey_id
-            ));
+            if ($structure) {
+                // Convert to our format
+                $converted = array(
+                    'survey_id' => $survey_id,
+                    'title' => $structure['title'] ?? '',
+                    'description' => $structure['description'] ?? '',
+                    'groups' => $structure['groups'] ?? array(),
+                    'questions' => $structure['questions'] ?? array(),
+                    'subquestions' => $structure['subquestions'] ?? array(),
+                    'answers' => $structure['answers'] ?? array(),
+                    'attributes' => array(),
+                    'last_updated' => current_time('mysql')
+                );
+                
+                $this->save_survey_structure($survey_id, $converted);
+                
+                wp_send_json_success(array(
+                    'message' => 'Sync โครงสร้างสำเร็จจาก LimeSurvey API',
+                    'survey_id' => $survey_id,
+                    'structure' => $converted
+                ));
+            } else {
+                wp_send_json_error('ไม่สามารถดึงโครงสร้างจาก LimeSurvey API - กรุณาตรวจสอบการตั้งค่า API');
+            }
         } else {
-            wp_send_json_error('ไม่สามารถดึงโครงสร้างจาก API');
+            wp_send_json_error('LimeSurvey API Connector ไม่พร้อมใช้งาน');
         }
     }
 }
