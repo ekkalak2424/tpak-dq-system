@@ -55,6 +55,10 @@ class TPAK_DQ_System {
             'includes/class-tpak-dq-complex-array-handler.php',
             'includes/class-tpak-dq-survey-structure-manager.php',
             'includes/class-tpak-dq-question-types.php',
+            'includes/class-tpak-dq-logic-manager.php',
+            'includes/class-tpak-dq-cache-manager.php',
+            'includes/class-tpak-dq-performance-monitor.php',
+            'includes/class-tpak-dq-lazy-loader.php',
         );
         
         foreach ($files as $file) {
@@ -177,6 +181,19 @@ class TPAK_DQ_System {
             id bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             post_id bigint(20) NOT NULL,
+            
+        // ตารางสำหรับ Cache
+        if (class_exists('TPAK_DQ_Cache_Manager')) {
+            $cache_manager = new TPAK_DQ_Cache_Manager();
+            $cache_manager->create_cache_table();
+        }
+        
+        // ตารางสำหรับ Performance Monitoring
+        if (class_exists('TPAK_DQ_Performance_Monitor')) {
+            $performance_monitor = new TPAK_DQ_Performance_Monitor();
+            $performance_monitor->create_performance_table();
+            $performance_monitor->create_survey_performance_table();
+        }
             action varchar(50) NOT NULL,
             old_status varchar(50),
             new_status varchar(50),

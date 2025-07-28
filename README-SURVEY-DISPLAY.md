@@ -49,6 +49,33 @@ tpak-dq-system-1/
 2. เลือก "TPAK Verification" > "Survey Display"
 3. เลือกข้อมูลที่ต้องการแสดง
 
+### 3. **ฟีเจอร์ที่สามารถทดสอบได้:**
+- ✅ การแสดงผลคำถามประเภทต่างๆ (Simple + Complex + Advanced)
+- ✅ การตอบคำถามและบันทึก
+- ✅ Auto-save (ทุก 30 วินาที)
+- ✅ Real-time validation
+- ✅ Progress tracking
+- ✅ Responsive design
+- ✅ Drag & Drop Ranking
+- ✅ File Upload with Progress
+- ✅ Date/Time Picker
+- ✅ Array Questions (Table format)
+- ✅ Matrix Questions (Radio/Checkbox/Text/Numeric)
+- ✅ Slider with Real-time Value Display
+- ✅ Dropdown with Custom Styling
+- ✅ List with Comment Integration
+- ✅ Conditional Logic (Show/Hide Questions)
+- ✅ Skip Logic (Skip to Questions)
+- ✅ Piping (Dynamic Text Replacement)
+- ✅ Real-time Logic Evaluation
+- ✅ Logic Validation & Debugging
+- ✅ Multi-layer Caching System
+- ✅ Lazy Loading for Questions
+- ✅ Performance Monitoring & Metrics
+- ✅ Memory Management & Optimization
+- ✅ Query Optimization
+- ✅ CDN Integration Ready
+
 ## 📝 การใช้งาน
 
 ### 1. **เข้าถึง Survey Display**
@@ -76,12 +103,45 @@ tpak-dq-system-1/
 - **Numeric (N):** ตัวเลข
 - **Yes/No (Y):** ใช่/ไม่ใช่
 
-### **Advanced Questions** (วางแผนสำหรับอนาคต)
-- **Array Questions (A):** คำถามแบบตาราง
-- **Matrix Questions:** คำถามแบบเมทริกซ์
-- **Ranking Questions (R):** การจัดอันดับ
-- **File Upload:** อัปโหลดไฟล์
-- **Date/Time:** วันเวลา
+### **Complex Questions** ✅ (เสร็จแล้ว)
+- **Array Questions (A):** คำถามแบบตาราง (Radio)
+- **Array Text Questions (B):** คำถามแบบตาราง (Text)
+- **Array Yes/No Questions (C):** คำถามแบบตาราง (Yes/No)
+- **Ranking Questions (R):** การจัดอันดับ (Drag & Drop)
+- **Date/Time Questions (W):** วันเวลา
+- **File Upload Questions (Z):** อัปโหลดไฟล์
+
+### **Advanced Questions** ✅ (เสร็จแล้ว)
+- **Matrix Questions (J):** คำถามแบบเมทริกซ์ (Radio/Checkbox)
+- **Matrix Text Questions (K):** คำถามแบบเมทริกซ์ (Text)
+- **Matrix Numeric Questions (P):** คำถามแบบเมทริกซ์ (Numeric)
+- **Slider Questions (V):** คำถามแบบสไลด์
+- **Dropdown Questions (!):** คำถามแบบดรอปดาวน์
+- **List with Comment Questions (O):** คำถามแบบรายการพร้อมความคิดเห็น
+
+### **Advanced Logic & Features** ✅ (เสร็จแล้ว)
+- **Conditional Logic:** ตรรกะเงื่อนไข (Show/Hide)
+- **Skip Logic:** ตรรกะการข้าม (Skip to)
+- **Piping:** การเชื่อมโยงข้อมูล (Dynamic Text)
+- **Logic Validation:** การตรวจสอบตรรกะ
+- **Logic Debugging:** การแก้ไขปัญหา
+- **Real-time Logic Evaluation:** การประเมินตรรกะแบบ Real-time
+
+### **Performance & Optimization** ✅ (เสร็จแล้ว)
+- **Caching System:** ระบบแคชหลายชั้น
+- **Lazy Loading:** การโหลดข้อมูลแบบ Lazy
+- **Performance Monitoring:** การติดตามประสิทธิภาพ
+- **Memory Management:** การจัดการหน่วยความจำ
+- **Query Optimization:** การปรับปรุงการสอบถาม
+- **CDN Integration:** การรวม CDN
+
+### **Future Features** (วางแผนสำหรับอนาคต)
+- **Branching:** การแยกสาขา
+- **Multi-language Support:** รองรับหลายภาษา
+- **Advanced Validation:** การตรวจสอบขั้นสูง
+- **Logic Templates:** เทมเพลตตรรกะ
+- **Logic Import/Export:** การนำเข้า/ส่งออกตรรกะ
+- **Logic Analytics:** การวิเคราะห์ตรรกะ
 
 ## 🔧 การปรับแต่ง
 

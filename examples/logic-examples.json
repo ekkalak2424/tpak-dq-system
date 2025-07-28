@@ -1,0 +1,278 @@
+{
+  "survey_id": "example_survey",
+  "questions": [
+    {
+      "code": "Q1",
+      "type": "L",
+      "title": "คุณมีอายุเท่าไร?",
+      "options": [
+        {"value": "18-25", "label": "18-25 ปี"},
+        {"value": "26-35", "label": "26-35 ปี"},
+        {"value": "36-45", "label": "36-45 ปี"},
+        {"value": "46+", "label": "46+ ปี"}
+      ]
+    },
+    {
+      "code": "Q2",
+      "type": "L",
+      "title": "คุณทำงานในภาคไหน?",
+      "options": [
+        {"value": "private", "label": "ภาคเอกชน"},
+        {"value": "government", "label": "ภาครัฐ"},
+        {"value": "freelance", "label": "ฟรีแลนซ์"},
+        {"value": "student", "label": "นักเรียน/นักศึกษา"},
+        {"value": "other", "label": "อื่นๆ"}
+      ]
+    },
+    {
+      "code": "Q3",
+      "type": "T",
+      "title": "กรุณาระบุรายละเอียดงานของคุณ",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q2",
+            "operator": "equals",
+            "value": "other"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q4",
+      "type": "L",
+      "title": "คุณมีประสบการณ์ทำงานกี่ปี?",
+      "options": [
+        {"value": "0-2", "label": "0-2 ปี"},
+        {"value": "3-5", "label": "3-5 ปี"},
+        {"value": "6-10", "label": "6-10 ปี"},
+        {"value": "10+", "label": "10+ ปี"}
+      ],
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q2",
+            "operator": "not_equals",
+            "value": "student"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q5",
+      "type": "N",
+      "title": "คุณมีเงินเดือนเท่าไร? (บาท)",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q2",
+            "operator": "in",
+            "value": ["private", "government"]
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q6",
+      "type": "L",
+      "title": "คุณพอใจกับงานปัจจุบันหรือไม่?",
+      "options": [
+        {"value": "very_satisfied", "label": "พอใจมาก"},
+        {"value": "satisfied", "label": "พอใจ"},
+        {"value": "neutral", "label": "เฉยๆ"},
+        {"value": "dissatisfied", "label": "ไม่พอใจ"},
+        {"value": "very_dissatisfied", "label": "ไม่พอใจมาก"}
+      ],
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q2",
+            "operator": "not_equals",
+            "value": "student"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q7",
+      "type": "T",
+      "title": "กรุณาให้คำแนะนำสำหรับการปรับปรุงงานของคุณ",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q6",
+            "operator": "in",
+            "value": ["dissatisfied", "very_dissatisfied"]
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q8",
+      "type": "L",
+      "title": "คุณต้องการเปลี่ยนงานหรือไม่?",
+      "options": [
+        {"value": "yes", "label": "ใช่"},
+        {"value": "no", "label": "ไม่"},
+        {"value": "maybe", "label": "อาจจะ"}
+      ],
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q6",
+            "operator": "in",
+            "value": ["dissatisfied", "very_dissatisfied"]
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q9",
+      "type": "L",
+      "title": "คุณต้องการทำงานในตำแหน่งอะไร?",
+      "options": [
+        {"value": "manager", "label": "ผู้จัดการ"},
+        {"value": "specialist", "label": "ผู้เชี่ยวชาญ"},
+        {"value": "coordinator", "label": "ผู้ประสานงาน"},
+        {"value": "other", "label": "อื่นๆ"}
+      ],
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q8",
+            "operator": "equals",
+            "value": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q10",
+      "type": "T",
+      "title": "กรุณาระบุตำแหน่งที่ต้องการ",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q9",
+            "operator": "equals",
+            "value": "other"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q11",
+      "type": "L",
+      "title": "คุณมีทักษะด้านไหนบ้าง?",
+      "options": [
+        {"value": "programming", "label": "การเขียนโปรแกรม"},
+        {"value": "design", "label": "การออกแบบ"},
+        {"value": "marketing", "label": "การตลาด"},
+        {"value": "sales", "label": "การขาย"},
+        {"value": "management", "label": "การจัดการ"},
+        {"value": "other", "label": "อื่นๆ"}
+      ]
+    },
+    {
+      "code": "Q12",
+      "type": "T",
+      "title": "กรุณาระบุทักษะอื่นๆ",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q11",
+            "operator": "contains",
+            "value": "other"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q13",
+      "type": "L",
+      "title": "คุณต้องการพัฒนาทักษะด้านไหน?",
+      "options": [
+        {"value": "technical", "label": "ด้านเทคนิค"},
+        {"value": "soft_skills", "label": "ด้าน Soft Skills"},
+        {"value": "leadership", "label": "ด้านความเป็นผู้นำ"},
+        {"value": "communication", "label": "ด้านการสื่อสาร"}
+      ]
+    },
+    {
+      "code": "Q14",
+      "type": "L",
+      "title": "คุณต้องการเข้าร่วมโปรแกรมพัฒนาทักษะหรือไม่?",
+      "options": [
+        {"value": "yes", "label": "ใช่"},
+        {"value": "no", "label": "ไม่"}
+      ]
+    },
+    {
+      "code": "Q15",
+      "type": "L",
+      "title": "คุณต้องการเข้าร่วมโปรแกรมประเภทไหน?",
+      "options": [
+        {"value": "online", "label": "ออนไลน์"},
+        {"value": "offline", "label": "ออฟไลน์"},
+        {"value": "hybrid", "label": "ผสมผสาน"}
+      ],
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q14",
+            "operator": "equals",
+            "value": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q16",
+      "type": "T",
+      "title": "กรุณาให้ความคิดเห็นเพิ่มเติม",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q14",
+            "operator": "equals",
+            "value": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q17",
+      "type": "L",
+      "title": "คุณจะแนะนำเพื่อนให้เข้าร่วมโปรแกรมนี้หรือไม่?",
+      "options": [
+        {"value": "definitely", "label": "แน่นอน"},
+        {"value": "probably", "label": "น่าจะ"},
+        {"value": "maybe", "label": "อาจจะ"},
+        {"value": "probably_not", "label": "น่าจะไม่"},
+        {"value": "definitely_not", "label": "ไม่แน่นอน"}
+      ],
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q14",
+            "operator": "equals",
+            "value": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "code": "Q18",
+      "type": "T",
+      "title": "ขอบคุณที่เข้าร่วมการสำรวจ {Q1}",
+      "logic": {
+        "show_if": [
+          {
+            "question": "Q1",
+            "operator": "is_not_empty"
+          }
+        ]
+      }
+    }
+  ]
+} 

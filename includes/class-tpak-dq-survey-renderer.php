@@ -72,7 +72,8 @@ class TPAK_DQ_Survey_Renderer {
             );
             
             // Enqueue JavaScript
-            wp_enqueue_script('tpak-survey-display', TPAK_DQ_PLUGIN_URL . 'assets/js/survey-display.js', array('jquery'), TPAK_DQ_VERSION, true);
+            wp_enqueue_script('jquery-ui-sortable');
+            wp_enqueue_script('tpak-survey-display', TPAK_DQ_PLUGIN_URL . 'assets/js/survey-display.js', array('jquery', 'jquery-ui-sortable'), TPAK_DQ_VERSION, true);
             wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.0', true);
             
             wp_localize_script('tpak-survey-display', 'tpak_dq', array(
@@ -3517,12 +3518,48 @@ class TPAK_DQ_Survey_Renderer {
         
         $survey_id = sanitize_text_field($_POST['survey_id']);
         
-        // ดึง Survey Structure
-        $structure = TPAK_DQ_Survey_Structure_Manager::get_survey_structure($survey_id);
+        // ดึง Survey Structure (with caching)
+        $structure = null;
+        
+        // Try to get from cache first
+        if (class_exists('TPAK_DQ_Cache_Manager')) {
+            $cache_manager = new TPAK_DQ_Cache_Manager();
+            $structure = $cache_manager->get_cached_survey_structure($survey_id);
+        }
+        
+        // If not in cache, get from database
+        if (!$structure) {
+            $structure = TPAK_DQ_Survey_Structure_Manager::get_survey_structure($survey_id);
+            
+            // Cache the structure
+            if ($structure && class_exists('TPAK_DQ_Cache_Manager')) {
+                $cache_manager->cache_survey_structure($survey_id, $structure);
+            }
+        }
         
         if ($structure) {
             // แปลงข้อมูลให้เข้ากับ Question Types Handler
             $questions = $this->format_questions_for_handler($structure['questions']);
+            
+            // ใช้ Logic Manager เพื่อกรองคำถาม
+            if (class_exists('TPAK_DQ_Logic_Manager')) {
+                $response_data = $_POST['response_data'] ?? array();
+                $logic_manager = new TPAK_DQ_Logic_Manager($structure, $response_data);
+                $filtered_questions = $logic_manager->get_filtered_questions();
+                
+                // Apply piping to question titles
+                foreach ($filtered_questions as &$question) {
+                    if (!empty($question['title'])) {
+                        $question['title'] = $logic_manager->apply_piping($question['title'], $question['code']);
+                    }
+                    if (!empty($question['help'])) {
+                        $question['help'] = $logic_manager->apply_piping($question['help'], $question['code']);
+                    }
+                }
+                
+                $questions = $filtered_questions;
+            }
+            
             wp_send_json_success(array('questions' => $questions));
         } else {
             wp_send_json_error('ไม่พบโครงสร้างแบบสอบถาม');
@@ -3570,7 +3607,8 @@ class TPAK_DQ_Survey_Renderer {
                 'type' => $question['type'] ?? 'T',
                 'help' => $question['help'] ?? '',
                 'required' => isset($question['mandatory']) ? $question['mandatory'] === 'Y' : false,
-                'options' => array()
+                'options' => array(),
+                'logic' => $question['logic'] ?? array()
             );
             
             // แปลงตัวเลือกสำหรับ List และ Multiple Choice
