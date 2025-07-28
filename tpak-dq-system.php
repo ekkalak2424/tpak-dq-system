@@ -54,6 +54,7 @@ class TPAK_DQ_System {
             'includes/class-tpak-dq-answer-mapping.php',
             'includes/class-tpak-dq-complex-array-handler.php',
             'includes/class-tpak-dq-survey-structure-manager.php',
+            'includes/class-tpak-dq-question-types.php',
         );
         
         foreach ($files as $file) {

@@ -1,0 +1,592 @@
+/**
+ * TPAK DQ Survey Display Styles
+ * Version: 1.0.0
+ */
+
+/* ==========================================================================
+   Survey Container
+   ========================================================================== */
+
+.tpak-survey-container {
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.tpak-survey-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.tpak-survey-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.tpak-survey-description {
+    font-size: 1.1rem;
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Question Styles
+   ========================================================================== */
+
+.tpak-question {
+    margin-bottom: 25px;
+    padding: 25px;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.tpak-question:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+.tpak-question-header {
+    margin-bottom: 20px;
+}
+
+.tpak-question-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.tpak-question-help {
+    font-size: 0.95rem;
+    color: #6c757d;
+    margin-bottom: 12px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.tpak-question-type {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #fff;
+    background: #007cba;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tpak-question-content {
+    margin-top: 15px;
+}
+
+/* ==========================================================================
+   Radio Button Styles
+   ========================================================================== */
+
+.tpak-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tpak-radio-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: #fff;
+}
+
+.tpak-radio-item:hover {
+    border-color: #007cba;
+    background: #f8f9ff;
+}
+
+.tpak-radio-item:has(input:checked) {
+    border-color: #007cba;
+    background: #e3f2fd;
+}
+
+.tpak-radio-input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #007cba;
+}
+
+.tpak-radio-label {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2c3e50;
+    cursor: pointer;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   Checkbox Styles
+   ========================================================================== */
+
+.tpak-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tpak-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: #fff;
+}
+
+.tpak-checkbox-item:hover {
+    border-color: #007cba;
+    background: #f8f9ff;
+}
+
+.tpak-checkbox-item:has(input:checked) {
+    border-color: #007cba;
+    background: #e3f2fd;
+}
+
+.tpak-checkbox-input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #007cba;
+}
+
+.tpak-checkbox-label {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2c3e50;
+    cursor: pointer;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   Text Input Styles
+   ========================================================================== */
+
+.tpak-text-input-group {
+    position: relative;
+}
+
+.tpak-text-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background: #fff;
+    color: #2c3e50;
+}
+
+.tpak-text-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.tpak-text-input::placeholder {
+    color: #adb5bd;
+}
+
+.tpak-short-text {
+    max-width: 400px;
+}
+
+/* ==========================================================================
+   Textarea Styles
+   ========================================================================== */
+
+.tpak-textarea-group {
+    position: relative;
+}
+
+.tpak-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 120px;
+    transition: all 0.2s ease;
+    background: #fff;
+    color: #2c3e50;
+}
+
+.tpak-textarea:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.tpak-textarea::placeholder {
+    color: #adb5bd;
+}
+
+/* ==========================================================================
+   Numeric Input Styles
+   ========================================================================== */
+
+.tpak-numeric-input-group {
+    position: relative;
+}
+
+.tpak-numeric-input {
+    width: 200px;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background: #fff;
+    color: #2c3e50;
+}
+
+.tpak-numeric-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.tpak-numeric-range {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: #6c757d;
+    display: flex;
+    gap: 20px;
+}
+
+.tpak-min-value,
+.tpak-max-value {
+    display: inline-block;
+}
+
+/* ==========================================================================
+   Yes/No Styles
+   ========================================================================== */
+
+.tpak-yesno-group {
+    display: flex;
+    gap: 20px;
+}
+
+.tpak-yesno-group .tpak-radio-item {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+    min-width: 120px;
+}
+
+/* ==========================================================================
+   Character Counter
+   ========================================================================== */
+
+.tpak-char-counter {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    text-align: right;
+}
+
+.tpak-char-count {
+    font-weight: 600;
+    color: #007cba;
+}
+
+.tpak-char-counter.warning .tpak-char-count {
+    color: #ffc107;
+}
+
+.tpak-char-counter.danger .tpak-char-count {
+    color: #dc3545;
+}
+
+/* ==========================================================================
+   Error States
+   ========================================================================== */
+
+.tpak-error {
+    color: #dc3545;
+    font-size: 0.9rem;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+
+.tpak-question.has-error {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.tpak-question.has-error .tpak-question-title {
+    color: #dc3545;
+}
+
+/* ==========================================================================
+   Success States
+   ========================================================================== */
+
+.tpak-question.is-completed {
+    border-color: #28a745;
+    background: #f8fff9;
+}
+
+.tpak-question.is-completed .tpak-question-type {
+    background: #28a745;
+}
+
+/* ==========================================================================
+   Progress Indicator
+   ========================================================================== */
+
+.tpak-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.tpak-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007cba, #0056b3);
+    transition: width 0.3s ease;
+}
+
+.tpak-progress-text {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+/* ==========================================================================
+   Navigation Buttons
+   ========================================================================== */
+
+.tpak-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.tpak-nav-button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tpak-nav-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tpak-nav-button.prev {
+    background: #6c757d;
+    color: #fff;
+}
+
+.tpak-nav-button.prev:hover:not(:disabled) {
+    background: #5a6268;
+}
+
+.tpak-nav-button.next {
+    background: #007cba;
+    color: #fff;
+}
+
+.tpak-nav-button.next:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.tpak-nav-button.submit {
+    background: #28a745;
+    color: #fff;
+}
+
+.tpak-nav-button.submit:hover:not(:disabled) {
+    background: #218838;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .tpak-survey-container {
+        padding: 15px;
+        margin: 10px;
+    }
+    
+    .tpak-question {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .tpak-question-title {
+        font-size: 1.1rem;
+    }
+    
+    .tpak-radio-item,
+    .tpak-checkbox-item {
+        padding: 10px 12px;
+    }
+    
+    .tpak-text-input,
+    .tpak-textarea,
+    .tpak-numeric-input {
+        padding: 10px 12px;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .tpak-yesno-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .tpak-navigation {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .tpak-nav-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .tpak-survey-title {
+        font-size: 1.5rem;
+    }
+    
+    .tpak-question {
+        padding: 15px;
+    }
+    
+    .tpak-radio-item,
+    .tpak-checkbox-item {
+        padding: 8px 10px;
+    }
+    
+    .tpak-radio-label,
+    .tpak-checkbox-label {
+        font-size: 0.95rem;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .tpak-survey-container {
+        background: #fff;
+        box-shadow: none;
+        padding: 0;
+    }
+    
+    .tpak-question {
+        border: 1px solid #000;
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+    
+    .tpak-navigation {
+        display: none;
+    }
+    
+    .tpak-char-counter {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   Accessibility Improvements
+   ========================================================================== */
+
+/* Focus indicators for keyboard navigation */
+.tpak-radio-input:focus + .tpak-radio-label,
+.tpak-checkbox-input:focus + .tpak-checkbox-label {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .tpak-question {
+        border-width: 2px;
+    }
+    
+    .tpak-radio-item,
+    .tpak-checkbox-item {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .tpak-question,
+    .tpak-radio-item,
+    .tpak-checkbox-item,
+    .tpak-text-input,
+    .tpak-textarea,
+    .tpak-numeric-input,
+    .tpak-nav-button {
+        transition: none;
+    }
+} 

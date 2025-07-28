@@ -21,9 +21,14 @@ class TPAK_DQ_Survey_Renderer {
         add_action('wp_ajax_tpak_refresh_survey_structure', array($this, 'ajax_refresh_survey_structure'));
         add_action('wp_ajax_tpak_save_answer', array($this, 'ajax_save_answer'));
         add_action('wp_ajax_tpak_save_survey_answers', array($this, 'ajax_save_survey_answers'));
+        add_action('wp_ajax_tpak_get_survey_structure', array($this, 'ajax_get_survey_structure'));
+        add_action('wp_ajax_tpak_submit_survey', array($this, 'ajax_submit_survey'));
         
         // เพิ่ม Meta Box ใหม่
         add_action('add_meta_boxes', array($this, 'add_survey_preview_metabox'), 15);
+        
+        // เพิ่ม Admin Menu สำหรับ Survey Display
+        add_action('admin_menu', array($this, 'add_survey_display_menu'));
         // Enqueue admin assets
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         
@@ -58,8 +63,19 @@ class TPAK_DQ_Survey_Renderer {
         // เฉพาะหน้า post.php/post-new.php ของ tpak_verification
         global $post;
         if (($hook === 'post.php' || $hook === 'post-new.php') && isset($post) && $post->post_type === 'tpak_verification') {
+            // Enqueue CSS
+            wp_enqueue_style(
+                'tpak-survey-display',
+                TPAK_DQ_PLUGIN_URL . 'assets/css/survey-display.css',
+                array(),
+                TPAK_DQ_VERSION
+            );
+            
+            // Enqueue JavaScript
+            wp_enqueue_script('tpak-survey-display', TPAK_DQ_PLUGIN_URL . 'assets/js/survey-display.js', array('jquery'), TPAK_DQ_VERSION, true);
             wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.0', true);
-            wp_localize_script('tpak-admin-js', 'tpak_dq', array(
+            
+            wp_localize_script('tpak-survey-display', 'tpak_dq', array(
                 'nonce' => wp_create_nonce('tpak_dq_nonce'),
                 'ajax_url' => admin_url('admin-ajax.php')
             ));
@@ -81,6 +97,46 @@ class TPAK_DQ_Survey_Renderer {
     }
     
     /**
+     * เพิ่ม Admin Menu สำหรับ Survey Display
+     */
+    public function add_survey_display_menu() {
+        add_submenu_page(
+            'edit.php?post_type=tpak_verification',
+            'Survey Display',
+            'Survey Display',
+            'edit_posts',
+            'tpak-survey-display',
+            array($this, 'render_survey_display_page')
+        );
+    }
+    
+    /**
+     * Render Survey Display Page
+     */
+    public function render_survey_display_page() {
+        $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
+        
+        if (!$post_id) {
+            echo '<div class="wrap"><h1>Survey Display</h1><p>กรุณาเลือกข้อมูลที่ต้องการแสดง</p></div>';
+            return;
+        }
+        
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'tpak_verification') {
+            echo '<div class="wrap"><h1>Survey Display</h1><p>ไม่พบข้อมูลที่ต้องการ</p></div>';
+            return;
+        }
+        
+        // Load template
+        $template_path = TPAK_DQ_PLUGIN_DIR . 'templates/survey-display.php';
+        if (file_exists($template_path)) {
+            include $template_path;
+        } else {
+            echo '<div class="wrap"><h1>Survey Display</h1><p>ไม่พบ template ไฟล์</p></div>';
+        }
+    }
+    
+    /**
      * Render Survey Preview Meta Box
      */
     public function render_survey_preview_metabox($post) {
@@ -96,6 +152,18 @@ class TPAK_DQ_Survey_Renderer {
         
         ?>
         <div class="tpak-survey-preview-wrapper">
+            <div class="tpak-preview-actions" style="margin-bottom: 15px;">
+                <a href="<?php echo admin_url('edit.php?post_type=tpak_verification&page=tpak-survey-display&post_id=' . $post->ID); ?>" 
+                   class="button button-primary">
+                    <span class="dashicons dashicons-visibility"></span>
+                    ดูแบบสอบถามแบบใหม่
+                </a>
+                <button type="button" class="button button-secondary tpak-refresh-preview">
+                    <span class="dashicons dashicons-update"></span>
+                    รีเฟรช
+                </button>
+            </div>
+            
             <?php $refresh_nonce = wp_create_nonce('tpak_survey_nonce'); ?>
             <style>
                 .tpak-survey-preview {
@@ -3436,6 +3504,163 @@ class TPAK_DQ_Survey_Renderer {
         }
         
         return 'คำถาม ' . $display_code;
+    }
+    
+    /**
+     * AJAX handler สำหรับดึง Survey Structure
+     */
+    public function ajax_get_survey_structure() {
+        // ตรวจสอบ nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'tpak_dq_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        $survey_id = sanitize_text_field($_POST['survey_id']);
+        
+        // ดึง Survey Structure
+        $structure = TPAK_DQ_Survey_Structure_Manager::get_survey_structure($survey_id);
+        
+        if ($structure) {
+            // แปลงข้อมูลให้เข้ากับ Question Types Handler
+            $questions = $this->format_questions_for_handler($structure['questions']);
+            wp_send_json_success(array('questions' => $questions));
+        } else {
+            wp_send_json_error('ไม่พบโครงสร้างแบบสอบถาม');
+        }
+    }
+    
+    /**
+     * AJAX handler สำหรับส่ง Survey
+     */
+    public function ajax_submit_survey() {
+        // ตรวจสอบ nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'tpak_dq_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        $survey_id = sanitize_text_field($_POST['survey_id']);
+        $answers = $_POST['answers'];
+        
+        // บันทึกคำตอบและอัพเดทสถานะ
+        $result = $this->save_survey_answers($survey_id, $answers);
+        
+        if ($result) {
+            // อัพเดทสถานะเป็น finalized
+            $post_id = $this->get_post_id_by_survey_id($survey_id);
+            if ($post_id) {
+                update_post_meta($post_id, '_tpak_workflow_status', 'finalized');
+            }
+            
+            wp_send_json_success('ส่งคำตอบเรียบร้อยแล้ว');
+        } else {
+            wp_send_json_error('เกิดข้อผิดพลาดในการส่งคำตอบ');
+        }
+    }
+    
+    /**
+     * แปลงข้อมูลคำถามให้เข้ากับ Question Types Handler
+     */
+    private function format_questions_for_handler($questions) {
+        $formatted_questions = array();
+        
+        foreach ($questions as $question) {
+            $formatted_question = array(
+                'code' => $question['qid'] ?? $question['code'] ?? '',
+                'title' => $question['question'] ?? $question['title'] ?? '',
+                'type' => $question['type'] ?? 'T',
+                'help' => $question['help'] ?? '',
+                'required' => isset($question['mandatory']) ? $question['mandatory'] === 'Y' : false,
+                'options' => array()
+            );
+            
+            // แปลงตัวเลือกสำหรับ List และ Multiple Choice
+            if (in_array($question['type'], array('L', 'M', 'Y'))) {
+                $formatted_question['options'] = $this->format_answer_options($question);
+            }
+            
+            // เพิ่มข้อมูลเพิ่มเติมตามประเภทคำถาม
+            switch ($question['type']) {
+                case 'N':
+                    $formatted_question['min_value'] = $question['min_value'] ?? '';
+                    $formatted_question['max_value'] = $question['max_value'] ?? '';
+                    break;
+                case 'T':
+                case 'S':
+                case 'U':
+                    $formatted_question['max_length'] = $question['max_length'] ?? '';
+                    $formatted_question['placeholder'] = $question['placeholder'] ?? '';
+                    break;
+                case 'U':
+                    $formatted_question['rows'] = $question['rows'] ?? 5;
+                    break;
+            }
+            
+            $formatted_questions[] = $formatted_question;
+        }
+        
+        return $formatted_questions;
+    }
+    
+    /**
+     * แปลงตัวเลือกคำตอบ
+     */
+    private function format_answer_options($question) {
+        $options = array();
+        
+        // ดึงข้อมูลจาก LimeSurvey format
+        if (isset($question['answers'])) {
+            foreach ($question['answers'] as $answer) {
+                $options[] = array(
+                    'value' => $answer['code'] ?? $answer['value'] ?? '',
+                    'label' => $answer['answer'] ?? $answer['label'] ?? ''
+                );
+            }
+        }
+        
+        return $options;
+    }
+    
+    /**
+     * หา Post ID จาก Survey ID
+     */
+    private function get_post_id_by_survey_id($survey_id) {
+        global $wpdb;
+        
+        $post_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} 
+             WHERE meta_key = '_tpak_survey_id' 
+             AND meta_value = %s",
+            $survey_id
+        ));
+        
+        return $post_id;
+    }
+    
+    /**
+     * บันทึกคำตอบของ Survey
+     */
+    private function save_survey_answers($survey_id, $answers) {
+        $post_id = $this->get_post_id_by_survey_id($survey_id);
+        
+        if (!$post_id) {
+            return false;
+        }
+        
+        // ดึงข้อมูล response ที่มีอยู่
+        $response_data = get_post_meta($post_id, '_tpak_import_data', true);
+        if (!is_array($response_data)) {
+            $response_data = array();
+        }
+        
+        // อัปเดตคำตอบทั้งหมด
+        foreach ($answers as $question_code => $answer_value) {
+            if (!empty($answer_value)) {
+                $response_data[$question_code] = sanitize_text_field($answer_value);
+            }
+        }
+        
+        // บันทึกลงฐานข้อมูล
+        return update_post_meta($post_id, '_tpak_import_data', $response_data);
     }
 }
 
