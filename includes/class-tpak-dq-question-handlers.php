@@ -96,6 +96,9 @@ class TPAK_DQ_Question_Handlers {
         );
         
         foreach ($response_data as $key => $value) {
+            if (in_array($key, array('tpak_survey_nonce', '_wp_http_referer', 'post_id'))) {
+                continue;
+            }
             if (strpos($key, $question_code) === 0) {
                 // ตรวจสอบว่าถูกเลือกหรือไม่
                 if ($value == 'Y' || $value == '1') {
@@ -130,6 +133,9 @@ class TPAK_DQ_Question_Handlers {
         );
         
         foreach ($response_data as $key => $value) {
+            if (in_array($key, array('tpak_survey_nonce', '_wp_http_referer', 'post_id'))) {
+                continue;
+            }
             if (strpos($key, $question_code) === 0 && !empty($value) && $value !== 'N') {
                 // ตรวจสอบว่าเป็น comment หรือไม่
                 if (strpos($key, 'comment') !== false) {
@@ -178,6 +184,9 @@ class TPAK_DQ_Question_Handlers {
         $rankings = array();
         
         foreach ($response_data as $key => $value) {
+            if (in_array($key, array('tpak_survey_nonce', '_wp_http_referer', 'post_id'))) {
+                continue;
+            }
             if (strpos($key, $question_code) === 0 && !empty($value) && $value !== 'N') {
                 // แยกอันดับ
                 if (preg_match('/^' . preg_quote($question_code) . '\[(\d+)\]$/', $key, $matches)) {
@@ -219,6 +228,9 @@ class TPAK_DQ_Question_Handlers {
         );
         
         foreach ($response_data as $key => $value) {
+            if (in_array($key, array('tpak_survey_nonce', '_wp_http_referer', 'post_id'))) {
+                continue;
+            }
             if (strpos($key, $question_code) === 0 && !empty($value) && $value !== 'N') {
                 // แยก subquestion และ scale
                 if (preg_match('/^' . preg_quote($question_code) . '\[([^#]+)#(\d)\]$/', $key, $matches)) {
@@ -262,6 +274,9 @@ class TPAK_DQ_Question_Handlers {
         $grouped_data = array();
         
         foreach ($response_data as $key => $value) {
+            if (in_array($key, array('tpak_survey_nonce', '_wp_http_referer', 'post_id'))) {
+                continue;
+            }
             if (strpos($key, $question_code) === 0 && !empty($value) && $value !== 'N') {
                 // พยายามแยก pattern ต่างๆ
                 $matched = false;

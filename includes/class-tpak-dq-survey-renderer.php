@@ -19,6 +19,8 @@ class TPAK_DQ_Survey_Renderer {
     public function __construct() {
         // Hook สำหรับ AJAX
         add_action('wp_ajax_tpak_refresh_survey_structure', array($this, 'ajax_refresh_survey_structure'));
+        add_action('wp_ajax_tpak_save_answer', array($this, 'ajax_save_answer'));
+        add_action('wp_ajax_tpak_save_survey_answers', array($this, 'ajax_save_survey_answers'));
         
         // เพิ่ม Meta Box ใหม่
         add_action('add_meta_boxes', array($this, 'add_survey_preview_metabox'), 15);
@@ -57,9 +59,9 @@ class TPAK_DQ_Survey_Renderer {
         global $post;
         if (($hook === 'post.php' || $hook === 'post-new.php') && isset($post) && $post->post_type === 'tpak_verification') {
             wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.0', true);
-            wp_localize_script('tpak-admin-js', 'tpak_dq_vars', array(
+            wp_localize_script('tpak-admin-js', 'tpak_dq', array(
                 'nonce' => wp_create_nonce('tpak_dq_nonce'),
-                'ajaxurl' => admin_url('admin-ajax.php')
+                'ajax_url' => admin_url('admin-ajax.php')
             ));
         }
     }
@@ -216,6 +218,106 @@ class TPAK_DQ_Survey_Renderer {
                 
                 .tpak-sub-question-answer {
                     margin-left: 10px;
+                }
+                
+                .tpak-save-answer-wrapper {
+                    margin-top: 15px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .tpak-save-answer-btn {
+                    background: #0073aa !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 8px 16px !important;
+                    border-radius: 4px !important;
+                    cursor: pointer !important;
+                    font-size: 14px !important;
+                    transition: background-color 0.2s ease !important;
+                }
+                
+                .tpak-save-answer-btn:hover {
+                    background: #005a87 !important;
+                }
+                
+                .tpak-save-answer-btn:disabled {
+                    background: #ccc !important;
+                    cursor: not-allowed !important;
+                }
+                
+                .tpak-save-status {
+                    font-size: 12px;
+                    font-style: italic;
+                }
+                
+                .tpak-save-status.success {
+                    color: #28a745;
+                }
+                
+                .tpak-save-status.error {
+                    color: #dc3545;
+                }
+                
+                .tpak-save-status.loading {
+                    color: #0073aa;
+                }
+                
+                .tpak-form-actions {
+                    margin-top: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    text-align: center;
+                }
+                
+                .tpak-save-button {
+                    background: #0073aa !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 12px 24px !important;
+                    border-radius: 6px !important;
+                    cursor: pointer !important;
+                    font-size: 16px !important;
+                    font-weight: 600 !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                .tpak-save-button:hover {
+                    background: #005a87 !important;
+                    transform: translateY(-1px);
+                }
+                
+                .tpak-save-button:disabled {
+                    background: #ccc !important;
+                    cursor: not-allowed !important;
+                    transform: none !important;
+                }
+                
+                .tpak-save-button.saved {
+                    background: #28a745 !important;
+                }
+                
+                /* ซ่อน hidden fields ไม่ให้แสดงเป็นคำถาม */
+                input[type="hidden"] {
+                    display: none !important;
+                }
+                
+                /* ซ่อน nonce และ system fields */
+                input[name*="nonce"],
+                input[name*="_wp_http_referer"],
+                input[name="post_id"],
+                input[name="tpak_survey_nonce"] {
+                    display: none !important;
+                }
+                
+                /* ซ่อน hidden fields ทั้งหมด */
+                input[type="hidden"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    position: absolute !important;
+                    left: -9999px !important;
                 }
                 
                 .tpak-radio-options {
@@ -458,8 +560,9 @@ class TPAK_DQ_Survey_Renderer {
                     </div>
                 </div>
                 
-                <form id="tpak-survey-form" method="post">
-                    <?php wp_nonce_field('tpak_save_survey_answers', 'tpak_survey_nonce'); ?>
+                <div id="tpak-survey-form">
+                    <!-- Hidden fields for AJAX -->
+                    <input type="hidden" name="tpak_survey_nonce" value="<?php echo wp_create_nonce('tpak_save_survey_answers'); ?>">
                     <input type="hidden" name="post_id" value="<?php echo $post->ID; ?>">
                     
                 <?php 
@@ -481,7 +584,7 @@ class TPAK_DQ_Survey_Renderer {
                             บันทึกคำตอบ
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
         
@@ -496,7 +599,7 @@ class TPAK_DQ_Survey_Renderer {
                 
                 button.prop('disabled', true).text('กำลังดึงข้อมูล...');
                 
-                $.post(ajaxurl, {
+                $.post(tpak_dq.ajax_url, {
                         action: 'tpak_refresh_survey_structure',
                         survey_id: surveyId,
                         post_id: postId,
@@ -514,28 +617,48 @@ class TPAK_DQ_Survey_Renderer {
             
             // Save survey answers
             $('.tpak-save-answers').on('click', function(){
+                console.log('TPAK Debug: Save answers button clicked');
+                console.log('TPAK Debug: tpak_dq object:', tpak_dq);
+                console.log('TPAK Debug: tpak_dq.ajax_url:', tpak_dq ? tpak_dq.ajax_url : 'undefined');
+                console.log('TPAK Debug: tpak_dq.nonce:', tpak_dq ? tpak_dq.nonce : 'undefined');
                 var button = $(this);
                 var postId = button.data('post-id');
                 var nonce = button.data('nonce');
                 
-                // Collect all form data
+                // Collect all form data - เฉพาะ input ที่เป็นคำตอบจริงๆ
                 var formData = {};
-                $('.tpak-survey-preview input, .tpak-survey-preview textarea, .tpak-survey-preview select').each(function(){
+                console.log('TPAK Debug: Looking for .tpak-answer-input elements');
+                console.log('TPAK Debug: Found .tpak-answer-input elements:', $('.tpak-survey-preview .tpak-answer-input').length);
+                console.log('TPAK Debug: All inputs in .tpak-survey-preview:', $('.tpak-survey-preview input').length);
+                console.log('TPAK Debug: Hidden inputs:', $('.tpak-survey-preview input[type="hidden"]').length);
+                
+                $('.tpak-survey-preview .tpak-answer-input').each(function(){
                     var name = $(this).attr('name');
                     var value = $(this).val();
+                    
+                    console.log('TPAK Debug: Processing input:', name, '=', value);
+                    
                     if (name && value !== undefined) {
                         formData[name] = value;
                     }
                 });
                 
+                console.log('TPAK Debug: Collected form data:', formData);
+                console.log('TPAK Debug: Form data count:', Object.keys(formData).length);
+                
                 button.prop('disabled', true).text('กำลังบันทึก...');
                 
-                $.post(ajaxurl, {
+                var ajaxData = {
                     action: 'tpak_save_survey_answers',
                     post_id: postId,
                     answers: formData,
                     nonce: nonce
-                }, function(response){
+                };
+                
+                console.log('TPAK Debug: Sending AJAX request:', ajaxData);
+                
+                $.post(tpak_dq.ajax_url, ajaxData, function(response){
+                    console.log('TPAK Debug: AJAX response:', response);
                     if(response.success){
                         button.text('บันทึกแล้ว!').addClass('saved');
                         setTimeout(function(){
@@ -545,6 +668,10 @@ class TPAK_DQ_Survey_Renderer {
                         alert('เกิดข้อผิดพลาด: ' + response.data);
                         button.prop('disabled', false).text('บันทึกคำตอบ');
                     }
+                }).fail(function(xhr, status, error) {
+                    console.error('TPAK Debug: AJAX error:', {xhr: xhr, status: status, error: error});
+                    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
+                    button.prop('disabled', false).text('บันทึกคำตอบ');
                 });
             });
             
@@ -574,6 +701,127 @@ class TPAK_DQ_Survey_Renderer {
         });
         </script>
         <?php
+    }
+    
+    /**
+     * AJAX handler สำหรับบันทึกคำตอบ
+     */
+    public function ajax_save_answer() {
+        $this->write_debug_log("TPAK Debug: [ajax_save_answer] Request received");
+        $this->write_debug_log("TPAK Debug: [ajax_save_answer] POST data: " . print_r($_POST, true));
+        // ตรวจสอบ nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'tpak_dq_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        // ตรวจสอบข้อมูลที่จำเป็น
+        if (!isset($_POST['post_id']) || !isset($_POST['question_code']) || !isset($_POST['answer_value'])) {
+            wp_send_json_error('Missing required data');
+        }
+        
+        $post_id = intval($_POST['post_id']);
+        $question_code = sanitize_text_field($_POST['question_code']);
+        $answer_value = sanitize_text_field($_POST['answer_value']);
+        
+        // ตรวจสอบสิทธิ์
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Permission denied');
+        }
+        
+        // ดึงข้อมูล response ที่มีอยู่
+        $response_data = get_post_meta($post_id, '_tpak_import_data', true);
+        if (!is_array($response_data)) {
+            $response_data = array();
+        }
+        
+        // อัปเดตคำตอบ
+        $response_data[$question_code] = $answer_value;
+        
+        // บันทึกลงฐานข้อมูล
+        $result = update_post_meta($post_id, '_tpak_import_data', $response_data);
+        
+        if ($result) {
+            $this->write_debug_log("TPAK Debug: [ajax_save_answer] Saved answer for $question_code = $answer_value in post $post_id");
+            wp_send_json_success('Answer saved successfully');
+        } else {
+            $this->write_debug_log("TPAK Debug: [ajax_save_answer] Failed to save answer for $question_code = $answer_value in post $post_id");
+            wp_send_json_error('Failed to save answer');
+        }
+    }
+    
+    /**
+     * AJAX handler สำหรับบันทึกคำตอบทั้งหมด
+     */
+    public function ajax_save_survey_answers() {
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Request received");
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] POST data: " . print_r($_POST, true));
+        
+        // ตรวจสอบ nonce
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce check - received: " . $_POST['nonce']);
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce check - expected action: tpak_save_survey_answers");
+        
+        if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
+            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce verification failed");
+            wp_send_json_error('Security check failed');
+        }
+        
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce verification passed");
+        
+        // ตรวจสอบข้อมูลที่จำเป็น
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] POST keys: " . implode(', ', array_keys($_POST)));
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] post_id exists: " . (isset($_POST['post_id']) ? 'yes' : 'no'));
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] answers exists: " . (isset($_POST['answers']) ? 'yes' : 'no'));
+        
+        if (!isset($_POST['post_id']) || !isset($_POST['answers'])) {
+            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Missing required data");
+            wp_send_json_error('Missing required data');
+        }
+        
+        $post_id = intval($_POST['post_id']);
+        $answers = $_POST['answers'];
+        
+        // ตรวจสอบสิทธิ์
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Current user can edit post: " . (current_user_can('edit_post', $post_id) ? 'yes' : 'no'));
+        
+        if (!current_user_can('edit_post', $post_id)) {
+            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Permission denied");
+            wp_send_json_error('Permission denied');
+        }
+        
+        // ดึงข้อมูล response ที่มีอยู่
+        $response_data = get_post_meta($post_id, '_tpak_import_data', true);
+        if (!is_array($response_data)) {
+            $response_data = array();
+        }
+        
+        // อัปเดตคำตอบทั้งหมด
+        $updated_count = 0;
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Original response_data: " . print_r($response_data, true));
+        
+        foreach ($answers as $question_code => $answer_value) {
+            if (!empty($answer_value)) {
+                $response_data[$question_code] = sanitize_text_field($answer_value);
+                $updated_count++;
+                $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated $question_code = $answer_value");
+            }
+        }
+        
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated response_data: " . print_r($response_data, true));
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated count: $updated_count");
+        
+        // บันทึกลงฐานข้อมูล
+        $result = update_post_meta($post_id, '_tpak_import_data', $response_data);
+        
+        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] update_post_meta result: " . ($result ? 'true' : 'false'));
+        
+        // ตรวจสอบว่ามีการอัปเดตหรือไม่
+        if ($updated_count > 0) {
+            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated $updated_count answers in post $post_id");
+            wp_send_json_success("บันทึกคำตอบ $updated_count รายการเรียบร้อย");
+        } else {
+            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] No answers to update");
+            wp_send_json_success("ไม่มีคำตอบที่ต้องอัปเดต");
+        }
     }
     
     /**
@@ -1440,6 +1688,9 @@ class TPAK_DQ_Survey_Renderer {
         
         // แยกข้อมูลพื้นฐาน
         foreach ($response_data as $key => $value) {
+            if (in_array($key, array('tpak_survey_nonce', '_wp_http_referer', 'post_id'))) {
+                continue;
+            }
             if (array_key_exists($key, $basic_fields)) {
                 $basic[$key] = array(
                     'label' => $basic_fields[$key],
@@ -1613,7 +1864,8 @@ class TPAK_DQ_Survey_Renderer {
                                    name="<?php echo esc_attr($key); ?>" 
                                    value="<?php echo esc_attr($opt_val); ?>"
                                    <?php checked($value, $opt_val); ?>
-                                   class="tpak-radio-input">
+                                   class="tpak-radio-input tpak-answer-input"
+                                   data-question="<?php echo esc_attr($key); ?>">
                             <label for="<?php echo esc_attr($key . '_' . $opt_val); ?>" class="tpak-radio-label">
                                 <?php echo esc_html($opt_label); ?>
                             </label>
@@ -1626,7 +1878,8 @@ class TPAK_DQ_Survey_Renderer {
                     <input type="text" 
                            name="<?php echo esc_attr($key); ?>" 
                            value="<?php echo esc_attr($formatted_value); ?>" 
-                           class="tpak-text-input"
+                           class="tpak-text-input tpak-answer-input"
+                           data-question="<?php echo esc_attr($key); ?>"
                            placeholder="กรอกคำตอบ">
                 </div>
             <?php endif; ?>
@@ -2907,21 +3160,21 @@ class TPAK_DQ_Survey_Renderer {
             'C6' => 'ที่อยู่ปัจจุบัน บ้านเลขที่',
             
             // พฤติกรรมด้านกิจกรรมทางกายและพฤติกรรมเนือยนิ่ง
-            'PA1tt1' => 'ส่วนที่ 2 กิจกรรมทางกาย ขั้นตอนที่ 1',
-            'PA2tt1' => 'โดยปกติ ใน 1 สัปดาห์ ท่านทำกิจกรรมทางกายระดับปานกลางหรือหนัก รวมกันอย่างน้อย 150 นาที หรือไม่',
-            'PA3tt1' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลานั่งหรือนอนรวมกันกี่ชั่วโมง',
-            'PA4t2' => 'ส่วนที่ 2.2 กิจกรรมทางกายในชีวิตประจำวัน',
-            'PA5t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านทำกิจกรรมทางกายในชีวิตประจำวันรวมกันกี่วัน',
-            'PA6t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลาทำกิจกรรมทางกายในชีวิตประจำวันรวมกันกี่นาที',
-            'PA7t2' => 'ส่วนที่ 2.3 กิจกรรมทางกายในการเดินทาง',
-            'PA8t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านเดินหรือปั่นจักรยานเพื่อการเดินทางรวมกันกี่วัน',
-            'PA9t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลาเดินหรือปั่นจักรยานเพื่อการเดินทางรวมกันกี่นาที',
-            'PA10t2' => 'ส่วนที่ 2.4 กิจกรรมทางกายนันทนาการ',
-            'PA11t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านทำกิจกรรมทางกายนันทนาการรวมกันกี่วัน',
-            'PA12t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลาทำกิจกรรมทางกายนันทนาการรวมกันกี่นาที',
-            'PA13t2' => 'ส่วนที่ 2.5 กิจกรรมทางกายในการทำงาน',
-            'PA14t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านทำกิจกรรมทางกายในการทำงานรวมกันกี่วัน',
-            'PA15t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลาทำกิจกรรมทางกายในการทำงานรวมกันกี่นาที',
+            'PA1tt1' => 'ส่วนที่ 2 กิจกรรมทางกาย ข้อคำถามในส่วนต่อไปนี้ จะขอสอบถามข้อมูลเกี่ยวกับเวลาที่ท่านใช้ทำกิจกรรมทางกายประเภทต่างๆ ไม่ว่าจะเป็นการเคลื่อนไหวร่างกายในกิจกรรมการทำงาน การเดินทางจากสถานที่หนึ่งไปยังอีกสถานที่หนึ่งด้วยเท้า หรือการทำกิจกรรมนันทนาการ กิจกรรมยามว่างที่เป็นการเคลื่อนไหว การออกกำลังกาย หรือการเล่นกีฬา  ขอความกรุณาในการตอบคำถามต่อไปนี้ แม้ว่าท่านจะคิดว่าตัวท่านเองเป็นผู้ที่ไม่ค่อยได้เคลื่อนไหว ไม่กระฉับกระเฉง หรือไม่ค่อยได้ปฏิบัติกิจกรรมทางกายก็ตาม โดยในการพิจารณานั้น ขอให้ท่านนึกถึงกิจกรรมที่ท่านได้มีการเคลื่อนไหวร่างกายในอิริยาบถต่างๆ ในการทำกิจกรรมตามที่ได้อธิบายข้างต้น โดยนับรวมเวลาที่เป็นการปฏิบัติ ทั้งในลักษณะต่อเนื่องในระยะเวลานาน เช่น ทำต่อเนื่องตั้งแต่ 10 นาที หรือ 30 นาที หรือนานกว่านั้น และการปฏิบัติแบบชั่วครู่ เช่น ทำต่อเนื่อง 3 ถึง 5 นาที หลักสำคัญคือ เมื่อปฏิบัติแล้วท่านรู้สึกถึงระดับความหนักและเหนื่อยหอบตรงตามระดับความหนักนั้น ๆ อย่างไรก็ดีการสอบถามข้อมูลในส่วนนี้จะยังไม่รวมถึงกิจกรรมที่ท่านทำชั่วครั้งคราวเพื่อเปลี่ยนอิริยาบถ ลุกเดินเพื่อเปลี่ยนตำแหน่งในการทำกิจกรรม เช่น เปลี่ยนอิริยาบถจากการนั่ง นั่งทำงาน หรือนอนเอนหลังนาน ๆ การลุกไปหยิบของในบ้านหรือสถานที่ทำงาน เป็นต้น   ส่วนที่ 2.1 กิจกรรมทางกายในการทำงาน ระดับหนัก 12.1 กิจกรรมทางกายในการทำงาน ระดับหนัก        อันดับแรก อยากให้ท่านนึกถึงเวลาที่ใช้สำหรับการมีกิจกรรมการทำงานในช่วง 1 ปีที่ผ่านมา อันประกอบด้วย การทำงานต่างๆ ทั้งที่ได้รับหรือไม่ได้รับค่าจ้าง การศึกษา/ฝึกอบรม, งานบ้าน/กิจกรรมในครัวเรือน, การทำงานเกษตรกรรม, การเพาะปลูกและเก็บเกี่ยว, การประมง, และการหางาน เป็นต้น     งานที่ท่านทำเกี่ยวข้องกับกิจกรรมทางกายระดับหนักที่ต้องเคลื่อนไหว ออกแรง หรือใช้พละกำลังของร่างกายอย่างหนัก จนทำให้หายใจแรง อัตราการเต้นของหัวใจเต้นเร็วขึ้นอย่างมาก จนรู้สึกเหนื่อยหอบ พูดไม่จบประโยค เช่น การยกหรือแบกของหนักๆ การขุดดิน หรืองานก่อสร้าง บ้างหรือไม่ ',
+            'PA2tt1' => 'โดยปกติ ใน 1 สัปดาห์ ท่านทำงานที่ถือเป็นกิจกรรมทางกายระดับหนักนี้ กี่วัน ',
+            'PA3tt1' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลานานเท่าไร สำหรับการทำงานที่ถือเป็นกิจกรรมทางกายระดับหนักนี้',
+            'PA4t2' => 'ส่วนที่ 2.2 กิจกรรมทางกายในการทำงาน ระดับปานกลาง 12.2 กิจกรรมทางกายในการทำงาน ระดับปานกลาง ในส่วนนี้จะเป็นการสอบถามถึงกิจกรรมทางกายระดับปานกลาง (เฉพาะที่เป็นกิจกรรมทางกายในการทำงานบ้าน งานอาชีพ) งานที่ท่านทำเกี่ยวข้องกับกิจกรรมทางกายระดับปานกลาง ซึ่งทำให้หายใจเร็วขึ้นพอควร แต่ไม่ถึงกับมีอาการหอบ บ้างหรือไม่',
+            'PA5t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านทำงานที่ถือเป็นกิจกรรมทางกายระดับปานกลางนี้ กี่วัน   ',
+            'PA6t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลานานเท่าไร สำหรับการทำงานที่ถือเป็นกิจกรรมทางกายระดับปานกลางนี้  ',
+            'PA7t2' => 'ส่วนที่ 2.3 กิจกรรมทางกายในการสัญจรด้วยเท้า 13. กิจกรรมทางกายในเดินทางสัญจรด้วยการเดิน หรือปั่นจักรยาน   กิจกรรมทางกายในการเดินทางจากที่หนึ่งไปยังอีกที่หนึ่ง คำถามที่จะถามต่อไปนี้ จะไม่รวมถึงกิจกรรมทางกายประเภทการทำงานตามที่ท่านได้กล่าวถึงมาแล้วในส่วนที่ผ่านมา      ในส่วนนี้ จะขอสอบถามข้อมูลเกี่ยวกับการเดินทางจากที่หนึ่งไปยังอีกที่หนึ่งด้วยการเดินหรือการปั่นจักรยาน ที่ท่านทำโดยปกติ เช่น การเดินทางไปทำงาน การเดินทางเพื่อไปจับจ่ายใช้สอย/ซื้อเครื่องใช้ต่างๆ ไปตลาด ไปทำบุญ หรือไปศาสนสถาน เป็นต้น ท่านเดินหรือปั่นจักรยานจากที่หนึ่งไปยังอีกที่หนึ่ง บ้างหรือไม่',
+            'PA8t2' => 'โดยปกติ ใน 1 สัปดาห์  ท่านเดินหรือปั่นจักรยานจากที่หนึ่งไปยังอีกที่หนึ่ง กี่วัน (ไม่รวมการเดินหรือปั่นจักรยานที่มีวัตถุประสงค์หลักเพื่อการออกกำลังกายหรือนันทนาการ)',
+            'PA9t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลานานเท่าไร สำหรับการเดินหรือปั่นจักรยานจากที่หนึ่งไปยังอีกที่หนึ่ง',
+            'PA10t2' => 'ส่วนที่ 2.4 กิจกรรมทางกายนันทนาการเพื่อความผ่อนคลาย การออกกำลังกาย หรือเล่นกีฬา ระดับหนัก 14.1 กิจกรรมทางกายเพื่อนันทนาการ/กิจกรรมยามว่างเพื่อความผ่อนคลาย ระดับหนัก คำถามที่จะถามต่อไปนี้ จะไม่รวมถึงกิจกรรมทางกายประเภทการทำงานและการเดินทางต่างๆ ตามที่ท่านได้กล่าวถึงมาแล้ว      สำหรับส่วนนี้ จะขอสอบถามข้อมูลเกี่ยวกับการออกกำลังกายและเล่นกีฬาประเภทต่างๆ การเล่นฟิตเนส การเต้นรำ และกิจกรรมนันทนาการ/กิจกรรมยามว่างเพื่อความผ่อนคลายที่ท่านปฏิบัติในเวลาว่างจากการทำงาน      ท่านเล่นกีฬา ออกกำลังกาย หรือทำกิจกรรมนันทนาการ/กิจกรรมยามว่างระดับหนัก จนทำให้หายใจแรง อัตราการเต้นของ หัวใจเต้นเร็วขึ้นอย่างมาก จนมีอาการรู้สึกเหนื่อยหอบ พูดไม่จบประโยค บ้างหรือไม่',
+            'PA11t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านออกกำลังกายหรือเล่นกีฬา หรือทำกิจกรรมนันทนาการ/กิจกรรมยามว่างระดับหนักนี้ กี่วัน   ',
+            'PA12t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลานานเท่าไร สำหรับการออกกำลังกาย หรือเล่นกีฬา หรือ ทำกิจกรรมนันทนาการ/กิจกรรมยามว่างระดับหนัก   ',
+            'PA13t2' => 'ส่วนที่ 2.5 กิจกรรมทางกายนันทนาการเพื่อความผ่อนคลาย การออกกำลังกาย หรือเล่นกีฬา ระดับปานกลาง   14.2 กิจกรรมทางกายเพื่อนันทนาการ/กิจกรรมยามว่างเพื่อความผ่อนคลาย ระดับปานกลาง        ท่านเล่นกีฬา ออกกำลังกาย หรือทำกิจกรรมนันทนาการ/กิจกรรมยามว่างระดับปานกลาง ซึ่งทำให้หายใจเร็วขึ้นพอควร แต่ไม่ถึงกับมีอาการหอบ บ้างหรือไม่',
+            'PA14t2' => 'โดยปกติ ใน 1 สัปดาห์ ท่านออกกำลังกายหรือเล่นกีฬา หรือทำกิจกรรมนันทนาการ/กิจกรรมยามว่างระดับปานกลางนี้ กี่วัน  ',
+            'PA15t2' => 'โดยปกติ ใน 1 วัน ท่านใช้เวลานานเท่าไร สำหรับการออกกำลังกาย หรือเล่นกีฬา หรือทำกิจกรรมนันทนาการ/กิจกรรมยามว่างระดับปานกลาง  ',
             'PASummary' => 'สรุปข้อมูล เวลารวมพฤติกรรมเนือยนิ่ง',
             
             // ส่วนที่ 3 : พฤติกรรมการใช้เวลาเกี่ยวกับการเคลื่อนไหวตลอด 24 ชั่วโมง
