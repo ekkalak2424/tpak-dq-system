@@ -5,11 +5,8 @@
 
 jQuery(document).ready(function($) {
     
-    console.log('TPAK DQ System JS loaded');
-    
     // ตรวจสอบว่ามี tpak_dq object หรือไม่
     if (typeof tpak_dq === 'undefined') {
-        console.error('TPAK Error: tpak_dq object not found');
         return;
     }
     
@@ -21,14 +18,7 @@ jQuery(document).ready(function($) {
         var status = button.data('status');
         var post_id = $('#post_ID').val();
         
-        // Debug
-        console.log('Workflow button clicked:', {
-            status: status,
-            post_id: post_id,
-            button_text: button.text(),
-            button_class: button.attr('class'),
-            disabled: button.prop('disabled')
-        });
+        // Debug code removed for performance
         
         // ตรวจสอบว่ามี post_id หรือไม่
         if (!post_id) {
@@ -49,7 +39,7 @@ jQuery(document).ready(function($) {
                   .addClass('button-disabled')
                   .text('กำลังอัพเดท...');
             
-            // Debug ajax data
+            // Debug code removed for performance
             var ajaxData = {
                 action: 'tpak_update_workflow_status',
                 nonce: tpak_dq.nonce,
@@ -58,15 +48,12 @@ jQuery(document).ready(function($) {
                 comment: comment
             };
             
-            console.log('Sending AJAX request:', ajaxData);
-            
             $.ajax({
                 url: tpak_dq.ajax_url,
                 type: 'POST',
                 dataType: 'json',
                 data: ajaxData,
                 success: function(response) {
-                    console.log('Ajax success response:', response);
                     
                     if (response.success) {
                         // แสดงข้อความสำเร็จ
@@ -89,13 +76,6 @@ jQuery(document).ready(function($) {
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Ajax error:', {
-                        xhr: xhr,
-                        status: status,
-                        error: error,
-                        responseText: xhr.responseText
-                    });
-                    
                     alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
                     
                     // Reset button
@@ -156,7 +136,6 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Import error:', error);
                 $('.results-content').html(
                     '<div style="color: red; padding: 10px; background: #fff0f0; border: 1px solid #ffd0d0; border-radius: 4px;">' +
                     '<strong>เกิดข้อผิดพลาด!</strong> ' + error +
@@ -300,73 +279,5 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Debug function สำหรับทดสอบ workflow
-    window.debugWorkflow = function() {
-        console.log('=== TPAK Workflow Debug ===');
-        console.log('Buttons found:', $('.tpak-update-status').length);
-        console.log('Post ID:', $('#post_ID').val());
-        console.log('Ajax URL:', tpak_dq.ajax_url);
-        console.log('Nonce:', tpak_dq.nonce);
-        
-        $('.tpak-update-status').each(function(index) {
-            console.log('Button ' + (index + 1) + ':', {
-                text: $(this).text(),
-                status: $(this).data('status'),
-                classes: $(this).attr('class'),
-                disabled: $(this).prop('disabled')
-            });
-        });
-    };
-    
-    // Test function สำหรับทดสอบ ajax call
-    window.testWorkflowAjax = function(status) {
-        if (!status) {
-            console.error('Please provide status. Example: testWorkflowAjax("pending_a")');
-            return;
-        }
-        
-        var testData = {
-            action: 'tpak_update_workflow_status',
-            nonce: tpak_dq.nonce,
-            post_id: $('#post_ID').val(),
-            status: status,
-            comment: 'Test from console'
-        };
-        
-        console.log('Testing with data:', testData);
-        
-        $.ajax({
-            url: tpak_dq.ajax_url,
-            type: 'POST',
-            dataType: 'json',
-            data: testData,
-            success: function(response) {
-                console.log('Test success:', response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Test failed:', {
-                    status: status,
-                    error: error,
-                    response: xhr.responseText
-                });
-            }
-        });
-    };
-    
-    // Log debug info on page load
-    if ($('.tpak-workflow-status').length) {
-        console.log('TPAK Workflow loaded. Use debugWorkflow() to see debug info.');
-        console.log('Use testWorkflowAjax("pending_a") to test ajax call.');
-    }
-    
-    // Monitor button clicks globally
-    $(document).on('click', 'button', function() {
-        if ($(this).hasClass('tpak-update-status')) {
-            console.log('TPAK button clicked (global monitor):', {
-                element: this,
-                status: $(this).data('status'),
-                text: $(this).text()
-            });
-        }
-    });
+    // Debug functions removed for performance
 });

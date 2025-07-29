@@ -483,21 +483,15 @@ class TPAK_DQ_Import {
             // Get survey responses (ส่งช่วงวันที่ไปยัง API)
             $responses = $client->export_responses($session_key, $survey_id, 'json', null, 'all', $start_date, $end_date);
             
-            // Debug
-            error_log('TPAK Debug: Import survey ' . $survey_id);
-            error_log('TPAK Debug: Response type = ' . gettype($responses));
-            error_log('TPAK Debug: Raw API response = ' . print_r($responses, true));
+                    // Debug code removed for performance
             
             // Check if we got valid data
             if (!is_array($responses)) {
-                error_log('TPAK Debug: Response is not array, value = ' . print_r($responses, true));
                 return array(
                     'success' => false,
                     'message' => 'ไม่สามารถดึงข้อมูลจาก Survey ID: ' . $survey_id . ' (ข้อมูลไม่ถูกต้อง)'
                 );
             }
-            
-            error_log('TPAK Debug: Response count = ' . count($responses));
             
             // Process responses
             $imported = 0;
@@ -507,10 +501,6 @@ class TPAK_DQ_Import {
                 // ตรวจสอบว่า response มี structure แบบไหน
                 if (isset($responses['responses'])) {
                     $responses = $responses['responses'];
-                    error_log('TPAK Debug: Number of responses in [responses] = ' . count($responses));
-                    if (!empty($responses)) {
-                        error_log('TPAK Debug: Sample response = ' . print_r($responses[0], true));
-                    }
                 }
                 
                 foreach ($responses as $idx => $response) {
@@ -521,7 +511,6 @@ class TPAK_DQ_Import {
                         }
                         // ใช้ response_id แบบ unique เสมอ
                         $response_id = $survey_id . '_' . $idx;
-                        error_log('TPAK Debug: Importing response index ' . $idx . ' with response_id = ' . $response_id);
                         // Check if already imported
                         $existing = get_posts(array(
                             'post_type' => 'tpak_verification',
@@ -557,18 +546,8 @@ class TPAK_DQ_Import {
                                 // บันทึกข้อมูล response ทั้งหมด
                                 // ตรวจสอบว่าข้อมูลเป็น array และไม่ว่าง
                                 if (is_array($response) && !empty($response)) {
-                                    // Log เพื่อ debug
-                                    error_log('TPAK Debug: Saving response data for post ' . $post_id);
-                                    error_log('TPAK Debug: Response has ' . count($response) . ' fields');
-                                    
                                     // บันทึกข้อมูล - WordPress จะ serialize อัตโนมัติ
-                                    $saved = update_post_meta($post_id, '_tpak_import_data', $response);
-                                    
-                                    if ($saved) {
-                                        error_log('TPAK Debug: Data saved successfully');
-                                    } else {
-                                        error_log('TPAK Debug: Failed to save data');
-                                    }
+                                    update_post_meta($post_id, '_tpak_import_data', $response);
                                 }
                                 
                                 update_post_meta($post_id, '_tpak_workflow_status', '');
@@ -579,7 +558,6 @@ class TPAK_DQ_Import {
                         }
                     } catch (Exception $e) {
                         $errors[] = $e->getMessage();
-                        error_log('TPAK Import Error (single response): ' . $e->getMessage());
                     }
                 }
             } else {
@@ -594,9 +572,7 @@ class TPAK_DQ_Import {
             // Release session
             $client->release_session_key($session_key);
             
-            if (!empty($errors)) {
-                error_log('TPAK Import Errors: ' . implode(', ', $errors));
-            }
+            // Errors handled silently for performance
             
             return array(
                 'success' => true,
@@ -604,7 +580,6 @@ class TPAK_DQ_Import {
             );
             
         } catch (Exception $e) {
-            error_log('TPAK Import Error: ' . $e->getMessage());
             return array(
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -667,11 +642,10 @@ class LimeSurveyAPIClient {
         if (isset($response['result'])) {
             $result = $response['result'];
             
-            // Check for errors
-            if (is_array($result) && isset($result['status'])) {
-                error_log('TPAK API Error: ' . print_r($result, true));
-                return array();
-            }
+                    // Check for errors
+        if (is_array($result) && isset($result['status'])) {
+            return array();
+        }
             
             // If it's already an array, return it
             if (is_array($result)) {
@@ -783,6 +757,21 @@ class LimeSurveyAPIClient {
         $response = $this->send_request($params);
         
         return isset($response['result']) ? $response['result'] : null;
+    }
+    
+    /**
+     * Get answer options for a question
+     */
+    public function list_answers($session_key, $question_id) {
+        $params = array(
+            'method' => 'list_answers',
+            'params' => array($session_key, intval($question_id)),
+            'id' => 1
+        );
+        
+        $response = $this->send_request($params);
+        
+        return isset($response['result']) ? $response['result'] : array();
     }
     
     public function send_request($params) {

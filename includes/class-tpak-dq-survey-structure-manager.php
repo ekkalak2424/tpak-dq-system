@@ -9,15 +9,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$structure = TPAK_DQ_Survey_Structure_Manager::get_survey_structure($survey_id);
-
-if ($structure) {
-    // ใช้ saved structure
-    $questions = $structure['questions'];
-    $answers = $structure['answers'];
-    $subquestions = $structure['subquestions'];
-}
-
 class TPAK_DQ_Survey_Structure_Manager {
     
     private static $instance = null;
@@ -37,6 +28,7 @@ class TPAK_DQ_Survey_Structure_Manager {
         add_action('wp_ajax_tpak_upload_lss', array($this, 'ajax_upload_lss'));
         add_action('wp_ajax_tpak_get_survey_structure', array($this, 'ajax_get_survey_structure'));
         add_action('wp_ajax_tpak_sync_survey_structure', array($this, 'ajax_sync_survey_structure'));
+        add_action('wp_ajax_tpak_delete_survey_structure', array($this, 'ajax_delete_survey_structure'));
     }
     
     /**
@@ -62,104 +54,32 @@ class TPAK_DQ_Survey_Structure_Manager {
             <h1>จัดการ Survey Structure</h1>
             
             <div class="tpak-structure-section">
-                <h2>วิธีที่ 1: Upload ไฟล์ .lss</h2>
-                <form id="tpak-lss-upload-form" enctype="multipart/form-data">
-                    <?php wp_nonce_field('tpak_upload_lss', 'tpak_lss_nonce'); ?>
-                    
-                    <table class="form-table">
-                        <tr>
-                            <th><label for="survey_id">Survey ID</label></th>
-                            <td>
-                                <input type="text" name="survey_id" id="survey_id" class="regular-text" required />
-                                <p class="description">ระบุ Survey ID ที่ต้องการอัพเดทโครงสร้าง</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="lss_file">ไฟล์ .lss</label></th>
-                            <td>
-                                <input type="file" name="lss_file" id="lss_file" accept=".lss" required />
-                                <p class="description">Export Survey structure จาก LimeSurvey</p>
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <p class="submit">
-                        <button type="submit" class="button button-primary">อัพโหลดโครงสร้าง</button>
-                    </p>
+                <h2>วิธีที่ 1: Upload ไฟล์ .lss จาก LimeSurvey</h2>
+                <div class="notice notice-info">
+                    <p><strong>วิธี Export ไฟล์ .lss จาก LimeSurvey:</strong></p>
+                    <ol>
+                        <li>เข้าไปที่ Survey ที่ต้องการใน LimeSurvey</li>
+                        <li>ไปที่เมนู "Survey properties" > "Survey menu" > "Export"</li>
+                        <li>เลือก "Export format" เป็น "LimeSurvey Survey Archive (.lss)"</li>
+                        <li>คลิก "Export" เพื่อดาวน์โหลดไฟล์ .lss</li>
+                    </ol>
+                </div>
+                <form id="lss-upload-form" enctype="multipart/form-data">
+                    <input type="file" name="lss_file" accept=".lss" required>
+                    <button type="submit" class="button button-primary">Upload และ Import Structure</button>
                 </form>
-                
-                <div id="upload-result" style="display:none;"></div>
+                <div id="upload-result"></div>
             </div>
-            
-            <hr />
             
             <div class="tpak-structure-section">
-                <h2>วิธีที่ 2: Sync จาก LimeSurvey API</h2>
-                <p>ดึงโครงสร้างจาก LimeSurvey API โดยตรง</p>
-                
-                <?php if (class_exists('TPAK_DQ_LimeSurvey_API')): ?>
-                    <?php
-                    $api = new TPAK_DQ_LimeSurvey_API();
-                    $api_url = get_option('tpak_limesurvey_api_url', '');
-                    $username = get_option('tpak_limesurvey_username', '');
-                    ?>
-                    
-                    <?php if (!empty($api_url) && !empty($username)): ?>
-                        <div class="tpak-api-status">
-                            <p><strong>API Status:</strong> 
-                                <span class="tpak-status-connected">✅ Connected</span>
-                                <a href="<?php echo admin_url('edit.php?post_type=tpak_verification&page=tpak-api-settings'); ?>" class="button button-small">Manage API Settings</a>
-                            </p>
-                        </div>
-                        
-                        <table class="form-table">
-                            <tr>
-                                <th><label for="api_survey_id">Survey ID</label></th>
-                                <td>
-                                    <input type="number" name="api_survey_id" id="api_survey_id" class="regular-text" required />
-                                    <p class="description">ระบุ Survey ID ที่ต้องการดึงจาก LimeSurvey API</p>
-                                </td>
-                            </tr>
-                        </table>
-                        
-                        <p class="submit">
-                            <button type="button" class="button button-primary" id="sync-from-api">Sync จาก API</button>
-                            <button type="button" class="button button-secondary" id="test-api-connection">Test API Connection</button>
-                        </p>
-                        
-                        <div id="api-sync-result" style="display:none;"></div>
-                    <?php else: ?>
-                        <div class="tpak-api-status">
-                            <p><strong>API Status:</strong> 
-                                <span class="tpak-status-disconnected">❌ Not Configured</span>
-                            </p>
-                            <p>กรุณาตั้งค่า LimeSurvey API ก่อนใช้งาน</p>
-                            <a href="<?php echo admin_url('edit.php?post_type=tpak_verification&page=tpak-api-settings'); ?>" class="button button-primary">Configure API Settings</a>
-                        </div>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <div class="tpak-api-status">
-                        <p><strong>API Status:</strong> 
-                            <span class="tpak-status-error">❌ API Connector Not Available</span>
-                        </p>
-                        <p>LimeSurvey API Connector ไม่พร้อมใช้งาน</p>
-                    </div>
-                <?php endif; ?>
-                
-                <table class="form-table">
-                    <tr>
-                        <th><label for="sync_survey_id">Survey ID</label></th>
-                        <td>
-                            <input type="text" id="sync_survey_id" class="regular-text" />
-                            <button type="button" class="button" id="sync-structure-btn">Sync โครงสร้าง</button>
-                        </td>
-                    </tr>
-                </table>
-                
-                <div id="sync-result" style="display:none;"></div>
+                <h2>วิธีที่ 2: Sync จาก Survey ID</h2>
+                <p class="description">ดึงโครงสร้างจาก API โดยตรง (ต้องมีการตั้งค่า API ที่ถูกต้อง)</p>
+                <form id="sync-form">
+                    <input type="number" name="survey_id" placeholder="Survey ID" required>
+                    <button type="submit" class="button button-primary">Sync Structure</button>
+                </form>
+                <div id="sync-result"></div>
             </div>
-            
-            <hr />
             
             <div class="tpak-structure-section">
                 <h2>Survey Structures ที่มีอยู่</h2>
@@ -167,16 +87,35 @@ class TPAK_DQ_Survey_Structure_Manager {
             </div>
         </div>
         
+        <style>
+        .tpak-structure-section {
+            background: #fff;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #ccd0d4;
+            box-shadow: 0 1px 1px rgba(0,0,0,.04);
+        }
+        .tpak-structure-section h2 {
+            margin-top: 0;
+        }
+        .tpak-structure-section form {
+            margin: 15px 0;
+        }
+        .tpak-structure-section input[type="file"],
+        .tpak-structure-section input[type="number"] {
+            margin-right: 10px;
+        }
+        </style>
+        
         <script type="text/javascript">
         jQuery(document).ready(function($) {
             // Upload LSS file
-            $('#tpak-lss-upload-form').on('submit', function(e) {
+            $('#lss-upload-form').on('submit', function(e) {
                 e.preventDefault();
                 
                 var formData = new FormData(this);
                 formData.append('action', 'tpak_upload_lss');
-                
-                $('#upload-result').html('<p>กำลังอัพโหลด...</p>').show();
+                formData.append('nonce', '<?php echo wp_create_nonce('tpak_upload_lss'); ?>');
                 
                 $.ajax({
                     url: ajaxurl,
@@ -187,25 +126,19 @@ class TPAK_DQ_Survey_Structure_Manager {
                     success: function(response) {
                         if (response.success) {
                             $('#upload-result').html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+                            location.reload();
                         } else {
                             $('#upload-result').html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
                         }
-                    },
-                    error: function() {
-                        $('#upload-result').html('<div class="notice notice-error"><p>เกิดข้อผิดพลาดในการอัพโหลด</p></div>');
                     }
                 });
             });
             
             // Sync from API
-            $('#sync-structure-btn').on('click', function() {
-                var surveyId = $('#sync_survey_id').val();
-                if (!surveyId) {
-                    alert('กรุณาระบุ Survey ID');
-                    return;
-                }
+            $('#sync-form').on('submit', function(e) {
+                e.preventDefault();
                 
-                $('#sync-result').html('<p>กำลัง sync...</p>').show();
+                var surveyId = $(this).find('input[name="survey_id"]').val();
                 
                 $.post(ajaxurl, {
                     action: 'tpak_sync_survey_structure',
@@ -230,60 +163,136 @@ class TPAK_DQ_Survey_Structure_Manager {
      */
     public function ajax_upload_lss() {
         // Check nonce
-        if (!check_ajax_referer('tpak_upload_lss', 'tpak_lss_nonce', false)) {
+        if (!check_ajax_referer('tpak_upload_lss', 'nonce', false)) {
             wp_send_json_error('Security check failed');
         }
         
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied');
-        }
-        
-        $survey_id = isset($_POST['survey_id']) ? intval($_POST['survey_id']) : 0;
-        
-        if (!$survey_id) {
-            wp_send_json_error('Invalid Survey ID');
-        }
-        
-        // Check file upload
-        if (!isset($_FILES['lss_file']) || $_FILES['lss_file']['error'] !== UPLOAD_ERR_OK) {
-            wp_send_json_error('File upload failed');
+        if (!isset($_FILES['lss_file'])) {
+            wp_send_json_error('ไม่พบไฟล์ที่ upload');
         }
         
         $file = $_FILES['lss_file'];
         
-        // Validate file extension
-        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-        if (strtolower($ext) !== 'lss') {
-            wp_send_json_error('กรุณาอัพโหลดไฟล์ .lss เท่านั้น');
+        // Check for upload errors
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error('Upload failed with error code: ' . $file['error']);
         }
         
-        // Parse LSS file
-        $result = $this->parse_lss_file($file['tmp_name'], $survey_id);
+        // Check file type
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'lss') {
+            wp_send_json_error('กรุณาเลือกไฟล์ .lss เท่านั้น (ไฟล์ที่เลือก: .' . $ext . ')');
+        }
         
-        if ($result) {
+        // Check file size (max 10MB)
+        if ($file['size'] > 10 * 1024 * 1024) {
+            wp_send_json_error('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 10MB)');
+        }
+        
+        // Read file content
+        $content = file_get_contents($file['tmp_name']);
+        
+        if ($content === false) {
+            wp_send_json_error('ไม่สามารถอ่านไฟล์ได้');
+        }
+        
+        error_log('TPAK Debug: LSS file size: ' . strlen($content) . ' bytes');
+        error_log('TPAK Debug: First 50 chars: ' . substr($content, 0, 50));
+        
+        // Parse LSS
+        $structure = $this->parse_lss_file($content);
+        
+        if ($structure) {
             wp_send_json_success(array(
-                'message' => 'อัพโหลดและบันทึกโครงสร้างสำเร็จ',
-                'survey_id' => $survey_id
+                'message' => 'Import structure สำเร็จสำหรับ Survey ID: ' . $structure['survey_id'],
+                'survey_id' => $structure['survey_id']
             ));
         } else {
-            wp_send_json_error('ไม่สามารถประมวลผลไฟล์ LSS');
+            wp_send_json_error('ไม่สามารถ parse ไฟล์ LSS - กรุณาตรวจสอบว่าเป็นไฟล์ LSS ที่ถูกต้องจาก LimeSurvey');
         }
     }
     
     /**
-     * Parse LSS file (XML format)
+     * Parse LSS file
      */
-    private function parse_lss_file($file_path, $survey_id) {
-        // Load XML
-        $xml = simplexml_load_file($file_path);
+    private function parse_lss_file($content) {
+        // Remove BOM if present
+        $content = str_replace("\xEF\xBB\xBF", '', $content);
+        
+        // Clean content - remove any whitespace or line breaks
+        $content = trim($content);
+        
+        // LSS is base64 encoded XML
+        $decoded = base64_decode($content, true);
+        
+        if (!$decoded) {
+            error_log('TPAK Debug: Failed to base64 decode LSS file');
+            
+            // Try to decode without strict mode
+            $decoded = base64_decode($content);
+            if (!$decoded) {
+                error_log('TPAK Debug: Failed to decode even without strict mode');
+                return false;
+            }
+        }
+        
+        // Remove any BOM from decoded content
+        $decoded = str_replace("\xEF\xBB\xBF", '', $decoded);
+        
+        // Log first 100 chars to debug
+        error_log('TPAK Debug: First 100 chars of decoded: ' . substr($decoded, 0, 100));
+        
+        // Try to parse XML
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($decoded);
         
         if (!$xml) {
+            $errors = libxml_get_errors();
+            foreach ($errors as $error) {
+                error_log('TPAK Debug XML Error: ' . $error->message);
+            }
+            libxml_clear_errors();
+            
+            // Try alternative parsing - maybe it's not base64 encoded
+            error_log('TPAK Debug: Trying to parse as direct XML');
+            $xml = simplexml_load_string($content);
+            
+            if (!$xml) {
+                error_log('TPAK Debug: Failed to parse as direct XML too');
+                return false;
+            }
+        }
+        
+        // Extract survey info
+        $survey_info = null;
+        
+        // Try different XML structures
+        if (isset($xml->surveys->rows->row)) {
+            $survey_info = $xml->surveys->rows->row;
+        } elseif (isset($xml->survey)) {
+            $survey_info = $xml->survey;
+        } elseif (isset($xml->rows->row)) {
+            $survey_info = $xml->rows->row;
+        }
+        
+        if (!$survey_info) {
+            error_log('TPAK Debug: Cannot find survey info in XML structure');
+            error_log('TPAK Debug: XML structure: ' . print_r($xml, true));
+            return false;
+        }
+        
+        $survey_id = isset($survey_info->sid) ? (string)$survey_info->sid : 
+                    (isset($survey_info->surveyid) ? (string)$survey_info->surveyid : '');
+        
+        if (!$survey_id) {
+            error_log('TPAK Debug: Cannot find survey ID');
             return false;
         }
         
         $structure = array(
             'survey_id' => $survey_id,
+            'title' => isset($survey_info->surveyls_title) ? (string)$survey_info->surveyls_title : 'Survey ' . $survey_id,
+            'description' => isset($survey_info->surveyls_description) ? (string)$survey_info->surveyls_description : '',
             'groups' => array(),
             'questions' => array(),
             'subquestions' => array(),
@@ -392,7 +401,51 @@ class TPAK_DQ_Survey_Structure_Manager {
         }
         
         // Save structure
-        return $this->save_survey_structure($survey_id, $structure);
+        $saved = $this->save_survey_structure($survey_id, $structure);
+        
+        if ($saved) {
+            return $structure;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Alternative method to parse LSS if it's compressed
+     */
+    private function parse_compressed_lss($content) {
+        // Try to decompress if it's gzipped
+        if (substr($content, 0, 2) === "\x1f\x8b") {
+            $decompressed = gzdecode($content);
+            if ($decompressed !== false) {
+                return $this->parse_lss_file($decompressed);
+            }
+        }
+        
+        // Try to unzip if it's a zip file
+        $temp_file = tempnam(sys_get_temp_dir(), 'lss_');
+        file_put_contents($temp_file, $content);
+        
+        $zip = new ZipArchive();
+        if ($zip->open($temp_file) === TRUE) {
+            $xml_content = '';
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $filename = $zip->getNameIndex($i);
+                if (pathinfo($filename, PATHINFO_EXTENSION) === 'xml') {
+                    $xml_content = $zip->getFromIndex($i);
+                    break;
+                }
+            }
+            $zip->close();
+            unlink($temp_file);
+            
+            if ($xml_content) {
+                return $this->parse_lss_file($xml_content);
+            }
+        }
+        
+        unlink($temp_file);
+        return false;
     }
     
     /**
@@ -435,6 +488,32 @@ class TPAK_DQ_Survey_Structure_Manager {
     public static function get_survey_structure($survey_id) {
         $option_name = 'tpak_survey_structure_' . $survey_id;
         return get_option($option_name, false);
+    }
+    
+    /**
+     * Delete survey structure
+     */
+    public function ajax_delete_survey_structure() {
+        // Check nonce
+        if (!check_ajax_referer('tpak_delete_structure', 'nonce', false)) {
+            wp_send_json_error('Security check failed');
+        }
+        
+        $survey_id = isset($_POST['survey_id']) ? intval($_POST['survey_id']) : 0;
+        
+        if (!$survey_id) {
+            wp_send_json_error('Invalid Survey ID');
+        }
+        
+        $option_name = 'tpak_survey_structure_' . $survey_id;
+        
+        if (delete_option($option_name)) {
+            wp_send_json_success(array(
+                'message' => 'ลบ Survey Structure สำเร็จ'
+            ));
+        } else {
+            wp_send_json_error('ไม่สามารถลบ Survey Structure');
+        }
     }
     
     /**
@@ -530,123 +609,23 @@ class TPAK_DQ_Survey_Structure_Manager {
                 var surveyId = $(this).data('survey-id');
                 var row = $(this).closest('tr');
                 
-                // Implementation for delete
-                // ...
-            });
-            
-            // Sync from API
-            $('#sync-from-api').on('click', function() {
-                var surveyId = $('#api_survey_id').val();
-                var button = $(this);
-                var resultDiv = $('#api-sync-result');
-                
-                if (!surveyId) {
-                    alert('กรุณาระบุ Survey ID');
-                    return;
-                }
-                
-                button.prop('disabled', true).text('Syncing...');
-                
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'tpak_sync_survey_structure',
-                        survey_id: surveyId,
-                        nonce: '<?php echo wp_create_nonce('tpak_sync_structure'); ?>'
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            resultDiv.html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
-                            // Reload page after successful sync
-                            setTimeout(function() {
-                                location.reload();
-                            }, 2000);
-                        } else {
-                            resultDiv.html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
-                        }
-                        resultDiv.show();
-                    },
-                    error: function() {
-                        resultDiv.html('<div class="notice notice-error"><p>Failed to sync from API</p></div>');
-                        resultDiv.show();
-                    },
-                    complete: function() {
-                        button.prop('disabled', false).text('Sync จาก API');
-                    }
-                });
-            });
-            
-            // Test API connection
-            $('#test-api-connection').on('click', function() {
-                var button = $(this);
-                var resultDiv = $('#api-sync-result');
-                
-                button.prop('disabled', true).text('Testing...');
-                
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'tpak_test_api_connection',
-                        nonce: '<?php echo wp_create_nonce('tpak_test_api'); ?>'
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            resultDiv.html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
-                        } else {
-                            resultDiv.html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
-                        }
-                        resultDiv.show();
-                    },
-                    error: function() {
-                        resultDiv.html('<div class="notice notice-error"><p>API connection test failed</p></div>');
-                        resultDiv.show();
-                    },
-                    complete: function() {
-                        button.prop('disabled', false).text('Test API Connection');
+                $.post(ajaxurl, {
+                    action: 'tpak_delete_survey_structure',
+                    survey_id: surveyId,
+                    nonce: '<?php echo wp_create_nonce('tpak_delete_structure'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        row.fadeOut(function() {
+                            row.remove();
+                        });
+                        alert(response.data.message);
+                    } else {
+                        alert('Error: ' + response.data);
                     }
                 });
             });
         });
         </script>
-        
-        <style>
-        .tpak-structure-section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #fff;
-            border: 1px solid #e1e1e1;
-            border-radius: 8px;
-        }
-        
-        .tpak-api-status {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #007cba;
-        }
-        
-        .tpak-status-connected {
-            color: #28a745;
-            font-weight: 600;
-        }
-        
-        .tpak-status-disconnected {
-            color: #dc3545;
-            font-weight: 600;
-        }
-        
-        .tpak-status-error {
-            color: #ffc107;
-            font-weight: 600;
-        }
-        
-        #api-sync-result {
-            margin-top: 15px;
-        }
-        </style>
         <?php
     }
     
@@ -689,37 +668,30 @@ class TPAK_DQ_Survey_Structure_Manager {
             wp_send_json_error('Invalid Survey ID');
         }
         
-        // Use LimeSurvey API to fetch structure
-        if (class_exists('TPAK_DQ_LimeSurvey_API')) {
-            $api = new TPAK_DQ_LimeSurvey_API();
-            $structure = $api->get_survey_structure($survey_id);
+        // Use existing survey renderer to fetch structure
+        $renderer = new TPAK_DQ_Survey_Renderer();
+        $structure = $renderer->fetch_survey_structure($survey_id);
+        
+        if ($structure) {
+            // Convert to our format
+            $converted = array(
+                'survey_id' => $survey_id,
+                'groups' => array(),
+                'questions' => $structure['questions'] ?? array(),
+                'subquestions' => $structure['subquestions'] ?? array(),
+                'answers' => $structure['answer_options'] ?? array(),
+                'attributes' => array(),
+                'last_updated' => current_time('mysql')
+            );
             
-            if ($structure) {
-                // Convert to our format
-                $converted = array(
-                    'survey_id' => $survey_id,
-                    'title' => $structure['title'] ?? '',
-                    'description' => $structure['description'] ?? '',
-                    'groups' => $structure['groups'] ?? array(),
-                    'questions' => $structure['questions'] ?? array(),
-                    'subquestions' => $structure['subquestions'] ?? array(),
-                    'answers' => $structure['answers'] ?? array(),
-                    'attributes' => array(),
-                    'last_updated' => current_time('mysql')
-                );
-                
-                $this->save_survey_structure($survey_id, $converted);
-                
-                wp_send_json_success(array(
-                    'message' => 'Sync โครงสร้างสำเร็จจาก LimeSurvey API',
-                    'survey_id' => $survey_id,
-                    'structure' => $converted
-                ));
-            } else {
-                wp_send_json_error('ไม่สามารถดึงโครงสร้างจาก LimeSurvey API - กรุณาตรวจสอบการตั้งค่า API');
-            }
+            $this->save_survey_structure($survey_id, $converted);
+            
+            wp_send_json_success(array(
+                'message' => 'Sync โครงสร้างสำเร็จ',
+                'survey_id' => $survey_id
+            ));
         } else {
-            wp_send_json_error('LimeSurvey API Connector ไม่พร้อมใช้งาน');
+            wp_send_json_error('ไม่สามารถดึงโครงสร้างจาก API');
         }
     }
 }

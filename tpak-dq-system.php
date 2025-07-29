@@ -54,12 +54,6 @@ class TPAK_DQ_System {
             'includes/class-tpak-dq-answer-mapping.php',
             'includes/class-tpak-dq-complex-array-handler.php',
             'includes/class-tpak-dq-survey-structure-manager.php',
-            'includes/class-tpak-dq-question-types.php',
-            'includes/class-tpak-dq-logic-manager.php',
-            'includes/class-tpak-dq-cache-manager.php',
-            'includes/class-tpak-dq-performance-monitor.php',
-            'includes/class-tpak-dq-lazy-loader.php',
-            'includes/class-tpak-dq-limesurvey-api.php',
         );
         
         foreach ($files as $file) {
@@ -149,7 +143,7 @@ class TPAK_DQ_System {
         // CSS
         wp_enqueue_style(
             'tpak-dq-admin',
-            TPAK_DQ_PLUGIN_URL . 'assets/css/admin.css',
+            TPAK_DQ_PLUGIN_URL . 'assets/admin.css',
             array(),
             TPAK_DQ_VERSION
         );
@@ -157,7 +151,7 @@ class TPAK_DQ_System {
         // JavaScript
         wp_enqueue_script(
             'tpak-dq-admin',
-            TPAK_DQ_PLUGIN_URL . 'assets/js/admin.js',
+            TPAK_DQ_PLUGIN_URL . 'assets/admin.js',
             array('jquery'),
             TPAK_DQ_VERSION,
             true
@@ -182,19 +176,6 @@ class TPAK_DQ_System {
             id bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             post_id bigint(20) NOT NULL,
-            
-        // ตารางสำหรับ Cache
-        if (class_exists('TPAK_DQ_Cache_Manager')) {
-            $cache_manager = new TPAK_DQ_Cache_Manager();
-            $cache_manager->create_cache_table();
-        }
-        
-        // ตารางสำหรับ Performance Monitoring
-        if (class_exists('TPAK_DQ_Performance_Monitor')) {
-            $performance_monitor = new TPAK_DQ_Performance_Monitor();
-            $performance_monitor->create_performance_table();
-            $performance_monitor->create_survey_performance_table();
-        }
             action varchar(50) NOT NULL,
             old_status varchar(50),
             new_status varchar(50),
@@ -327,69 +308,9 @@ function tpak_render_fix_workflow_page() {
     <?php
 }
 
-add_action('admin_footer', function() {
-    if (get_current_screen()->post_type !== 'tpak_verification') {
-        return;
-    }
-    ?>
-    <script type="text/javascript">
-    console.log('=== TPAK Debug from PHP ===');
-    console.log('jQuery version:', jQuery.fn.jquery);
-    console.log('ajaxurl:', typeof ajaxurl !== 'undefined' ? ajaxurl : 'not found');
-    console.log('tpak_dq:', typeof tpak_dq !== 'undefined' ? tpak_dq : 'not found');
-    
-    // Force initialize if needed
-    jQuery(document).ready(function($) {
-        console.log('Document ready - checking buttons...');
-        
-        setTimeout(function() {
-            var buttons = $('.tpak-update-status');
-            console.log('Found ' + buttons.length + ' workflow buttons');
-            
-            if (buttons.length > 0 && !$._data(buttons[0], 'events')) {
-                console.warn('No events bound to buttons! Binding manually...');
-                
-                buttons.on('click', function(e) {
-                    e.preventDefault();
-                    
-                    var status = $(this).data('status');
-                    var post_id = $('#post_ID').val();
-                    
-                    console.log('Manual handler triggered:', status, post_id);
-                    
-                    var comment = prompt('กรุณาใส่หมายเหตุ (ถ้ามี):');
-                    if (comment === null) return;
-                    
-                    $.post(ajaxurl, {
-                        action: 'tpak_update_workflow_status',
-                        nonce: tpak_dq.nonce,
-                        post_id: post_id,
-                        status: status,
-                        comment: comment
-                    }, function(response) {
-                        console.log('Response:', response);
-                        if (response.success) {
-                            alert('อัพเดทสถานะเรียบร้อยแล้ว');
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.data);
-                        }
-                    });
-                });
-                
-                console.log('Manual event handler attached');
-            }
-        }, 1000);
-    });
-    </script>
-    <?php
-});
+// Debug code removed for performance
 
-// ตรวจสอบว่า scripts enqueue ถูกต้อง
-add_action('admin_enqueue_scripts', function($hook) {
-    error_log('TPAK Debug - admin_enqueue_scripts hook: ' . $hook);
-    error_log('TPAK Debug - current screen: ' . (get_current_screen() ? get_current_screen()->id : 'none'));
-}, 99);
+// Debug code removed for performance
 
 // Add menu for reassigning posts
 add_action('admin_menu', function() {

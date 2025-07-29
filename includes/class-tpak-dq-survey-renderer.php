@@ -21,62 +21,23 @@ class TPAK_DQ_Survey_Renderer {
         add_action('wp_ajax_tpak_refresh_survey_structure', array($this, 'ajax_refresh_survey_structure'));
         add_action('wp_ajax_tpak_save_answer', array($this, 'ajax_save_answer'));
         add_action('wp_ajax_tpak_save_survey_answers', array($this, 'ajax_save_survey_answers'));
-        add_action('wp_ajax_tpak_get_survey_structure', array($this, 'ajax_get_survey_structure'));
-        add_action('wp_ajax_tpak_submit_survey', array($this, 'ajax_submit_survey'));
         
         // เพิ่ม Meta Box ใหม่
         add_action('add_meta_boxes', array($this, 'add_survey_preview_metabox'), 15);
-        
-        // เพิ่ม Admin Menu สำหรับ Survey Display
-        add_action('admin_menu', array($this, 'add_survey_display_menu'));
         // Enqueue admin assets
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         
-        // สร้าง debug log file
-        $this->init_debug_log();
+        // Debug logging removed for performance
     }
     
-    /**
-     * สร้าง debug log file
-     */
-    private function init_debug_log() {
-        $log_dir = plugin_dir_path(__FILE__) . '../logs/';
-        if (!file_exists($log_dir)) {
-            wp_mkdir_p($log_dir);
-        }
-        
-        $this->debug_log_file = $log_dir . 'tpak-debug.log';
-    }
-    
-    /**
-     * เขียน debug log
-     */
-    private function write_debug_log($message) {
-        if (isset($this->debug_log_file)) {
-            $timestamp = date('Y-m-d H:i:s');
-            $log_message = "[$timestamp] $message" . PHP_EOL;
-            file_put_contents($this->debug_log_file, $log_message, FILE_APPEND | LOCK_EX);
-        }
-    }
+    // Debug logging removed for performance
 
     public function enqueue_admin_assets($hook) {
         // เฉพาะหน้า post.php/post-new.php ของ tpak_verification
         global $post;
         if (($hook === 'post.php' || $hook === 'post-new.php') && isset($post) && $post->post_type === 'tpak_verification') {
-            // Enqueue CSS
-            wp_enqueue_style(
-                'tpak-survey-display',
-                TPAK_DQ_PLUGIN_URL . 'assets/css/survey-display.css',
-                array(),
-                TPAK_DQ_VERSION
-            );
-            
-            // Enqueue JavaScript
-            wp_enqueue_script('jquery-ui-sortable');
-            wp_enqueue_script('tpak-survey-display', TPAK_DQ_PLUGIN_URL . 'assets/js/survey-display.js', array('jquery', 'jquery-ui-sortable'), TPAK_DQ_VERSION, true);
             wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.0', true);
-            
-            wp_localize_script('tpak-survey-display', 'tpak_dq', array(
+            wp_localize_script('tpak-admin-js', 'tpak_dq', array(
                 'nonce' => wp_create_nonce('tpak_dq_nonce'),
                 'ajax_url' => admin_url('admin-ajax.php')
             ));
@@ -98,54 +59,12 @@ class TPAK_DQ_Survey_Renderer {
     }
     
     /**
-     * เพิ่ม Admin Menu สำหรับ Survey Display
-     */
-    public function add_survey_display_menu() {
-        add_submenu_page(
-            'edit.php?post_type=tpak_verification',
-            'Survey Display',
-            'Survey Display',
-            'edit_posts',
-            'tpak-survey-display',
-            array($this, 'render_survey_display_page')
-        );
-    }
-    
-    /**
-     * Render Survey Display Page
-     */
-    public function render_survey_display_page() {
-        $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
-        
-        if (!$post_id) {
-            echo '<div class="wrap"><h1>Survey Display</h1><p>กรุณาเลือกข้อมูลที่ต้องการแสดง</p></div>';
-            return;
-        }
-        
-        $post = get_post($post_id);
-        if (!$post || $post->post_type !== 'tpak_verification') {
-            echo '<div class="wrap"><h1>Survey Display</h1><p>ไม่พบข้อมูลที่ต้องการ</p></div>';
-            return;
-        }
-        
-        // Load template
-        $template_path = TPAK_DQ_PLUGIN_DIR . 'templates/survey-display.php';
-        if (file_exists($template_path)) {
-            include $template_path;
-        } else {
-            echo '<div class="wrap"><h1>Survey Display</h1><p>ไม่พบ template ไฟล์</p></div>';
-        }
-    }
-    
-    /**
      * Render Survey Preview Meta Box
      */
     public function render_survey_preview_metabox($post) {
         $survey_id = get_post_meta($post->ID, '_tpak_survey_id', true);
         $response_data = get_post_meta($post->ID, '_tpak_import_data', true);
         $survey_structure = get_post_meta($post->ID, '_tpak_survey_structure', true);
-        error_log('TPAK Debug: [render_survey_preview_metabox] survey_id=' . print_r($survey_id, true));
-        error_log('TPAK Debug: [render_survey_preview_metabox] survey_structure=' . print_r($survey_structure, true));
         if (!$survey_id) {
             echo '<p>ไม่พบข้อมูล Survey ID</p>';
             return;
@@ -153,18 +72,6 @@ class TPAK_DQ_Survey_Renderer {
         
         ?>
         <div class="tpak-survey-preview-wrapper">
-            <div class="tpak-preview-actions" style="margin-bottom: 15px;">
-                <a href="<?php echo admin_url('edit.php?post_type=tpak_verification&page=tpak-survey-display&post_id=' . $post->ID); ?>" 
-                   class="button button-primary">
-                    <span class="dashicons dashicons-visibility"></span>
-                    ดูแบบสอบถามแบบใหม่
-                </a>
-                <button type="button" class="button button-secondary tpak-refresh-preview">
-                    <span class="dashicons dashicons-update"></span>
-                    รีเฟรช
-                </button>
-            </div>
-            
             <?php $refresh_nonce = wp_create_nonce('tpak_survey_nonce'); ?>
             <style>
                 .tpak-survey-preview {
@@ -635,13 +542,10 @@ class TPAK_DQ_Survey_Renderer {
                     <input type="hidden" name="post_id" value="<?php echo $post->ID; ?>">
                     
                 <?php 
-                $this->write_debug_log('TPAK Debug: [render_survey_preview_metabox] survey_structure exists: ' . ($survey_structure && is_array($survey_structure) ? 'true' : 'false'));
                 if ($survey_structure && is_array($survey_structure)) {
-                    $this->write_debug_log('TPAK Debug: [render_survey_preview_metabox] Using render_survey_structure');
                     $this->render_survey_structure($survey_structure, $response_data);
                 } else {
                     // แสดงเฉพาะข้อมูลที่มี
-                    $this->write_debug_log('TPAK Debug: [render_survey_preview_metabox] Using render_survey_with_answers (fallback)');
                     $this->render_survey_with_answers($response_data);
                 }
                 ?>
@@ -686,34 +590,21 @@ class TPAK_DQ_Survey_Renderer {
             
             // Save survey answers
             $('.tpak-save-answers').on('click', function(){
-                console.log('TPAK Debug: Save answers button clicked');
-                console.log('TPAK Debug: tpak_dq object:', tpak_dq);
-                console.log('TPAK Debug: tpak_dq.ajax_url:', tpak_dq ? tpak_dq.ajax_url : 'undefined');
-                console.log('TPAK Debug: tpak_dq.nonce:', tpak_dq ? tpak_dq.nonce : 'undefined');
                 var button = $(this);
                 var postId = button.data('post-id');
                 var nonce = button.data('nonce');
                 
                 // Collect all form data - เฉพาะ input ที่เป็นคำตอบจริงๆ
                 var formData = {};
-                console.log('TPAK Debug: Looking for .tpak-answer-input elements');
-                console.log('TPAK Debug: Found .tpak-answer-input elements:', $('.tpak-survey-preview .tpak-answer-input').length);
-                console.log('TPAK Debug: All inputs in .tpak-survey-preview:', $('.tpak-survey-preview input').length);
-                console.log('TPAK Debug: Hidden inputs:', $('.tpak-survey-preview input[type="hidden"]').length);
                 
                 $('.tpak-survey-preview .tpak-answer-input').each(function(){
                     var name = $(this).attr('name');
                     var value = $(this).val();
                     
-                    console.log('TPAK Debug: Processing input:', name, '=', value);
-                    
                     if (name && value !== undefined) {
                         formData[name] = value;
                     }
                 });
-                
-                console.log('TPAK Debug: Collected form data:', formData);
-                console.log('TPAK Debug: Form data count:', Object.keys(formData).length);
                 
                 button.prop('disabled', true).text('กำลังบันทึก...');
                 
@@ -724,10 +615,7 @@ class TPAK_DQ_Survey_Renderer {
                     nonce: nonce
                 };
                 
-                console.log('TPAK Debug: Sending AJAX request:', ajaxData);
-                
                 $.post(tpak_dq.ajax_url, ajaxData, function(response){
-                    console.log('TPAK Debug: AJAX response:', response);
                     if(response.success){
                         button.text('บันทึกแล้ว!').addClass('saved');
                         setTimeout(function(){
@@ -738,7 +626,6 @@ class TPAK_DQ_Survey_Renderer {
                         button.prop('disabled', false).text('บันทึกคำตอบ');
                     }
                 }).fail(function(xhr, status, error) {
-                    console.error('TPAK Debug: AJAX error:', {xhr: xhr, status: status, error: error});
                     alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
                     button.prop('disabled', false).text('บันทึกคำตอบ');
                 });
@@ -776,8 +663,6 @@ class TPAK_DQ_Survey_Renderer {
      * AJAX handler สำหรับบันทึกคำตอบ
      */
     public function ajax_save_answer() {
-        $this->write_debug_log("TPAK Debug: [ajax_save_answer] Request received");
-        $this->write_debug_log("TPAK Debug: [ajax_save_answer] POST data: " . print_r($_POST, true));
         // ตรวจสอบ nonce
         if (!wp_verify_nonce($_POST['nonce'], 'tpak_dq_nonce')) {
             wp_die('Security check failed');
@@ -810,10 +695,8 @@ class TPAK_DQ_Survey_Renderer {
         $result = update_post_meta($post_id, '_tpak_import_data', $response_data);
         
         if ($result) {
-            $this->write_debug_log("TPAK Debug: [ajax_save_answer] Saved answer for $question_code = $answer_value in post $post_id");
             wp_send_json_success('Answer saved successfully');
         } else {
-            $this->write_debug_log("TPAK Debug: [ajax_save_answer] Failed to save answer for $question_code = $answer_value in post $post_id");
             wp_send_json_error('Failed to save answer');
         }
     }
@@ -822,27 +705,13 @@ class TPAK_DQ_Survey_Renderer {
      * AJAX handler สำหรับบันทึกคำตอบทั้งหมด
      */
     public function ajax_save_survey_answers() {
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Request received");
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] POST data: " . print_r($_POST, true));
-        
         // ตรวจสอบ nonce
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce check - received: " . $_POST['nonce']);
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce check - expected action: tpak_save_survey_answers");
-        
         if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
-            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce verification failed");
             wp_send_json_error('Security check failed');
         }
         
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Nonce verification passed");
-        
         // ตรวจสอบข้อมูลที่จำเป็น
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] POST keys: " . implode(', ', array_keys($_POST)));
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] post_id exists: " . (isset($_POST['post_id']) ? 'yes' : 'no'));
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] answers exists: " . (isset($_POST['answers']) ? 'yes' : 'no'));
-        
         if (!isset($_POST['post_id']) || !isset($_POST['answers'])) {
-            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Missing required data");
             wp_send_json_error('Missing required data');
         }
         
@@ -850,10 +719,7 @@ class TPAK_DQ_Survey_Renderer {
         $answers = $_POST['answers'];
         
         // ตรวจสอบสิทธิ์
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Current user can edit post: " . (current_user_can('edit_post', $post_id) ? 'yes' : 'no'));
-        
         if (!current_user_can('edit_post', $post_id)) {
-            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Permission denied");
             wp_send_json_error('Permission denied');
         }
         
@@ -865,30 +731,21 @@ class TPAK_DQ_Survey_Renderer {
         
         // อัปเดตคำตอบทั้งหมด
         $updated_count = 0;
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Original response_data: " . print_r($response_data, true));
         
         foreach ($answers as $question_code => $answer_value) {
             if (!empty($answer_value)) {
                 $response_data[$question_code] = sanitize_text_field($answer_value);
                 $updated_count++;
-                $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated $question_code = $answer_value");
             }
         }
         
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated response_data: " . print_r($response_data, true));
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated count: $updated_count");
-        
         // บันทึกลงฐานข้อมูล
-        $result = update_post_meta($post_id, '_tpak_import_data', $response_data);
-        
-        $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] update_post_meta result: " . ($result ? 'true' : 'false'));
+        update_post_meta($post_id, '_tpak_import_data', $response_data);
         
         // ตรวจสอบว่ามีการอัปเดตหรือไม่
         if ($updated_count > 0) {
-            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] Updated $updated_count answers in post $post_id");
             wp_send_json_success("บันทึกคำตอบ $updated_count รายการเรียบร้อย");
         } else {
-            $this->write_debug_log("TPAK Debug: [ajax_save_survey_answers] No answers to update");
             wp_send_json_success("ไม่มีคำตอบที่ต้องอัปเดต");
         }
     }
@@ -1130,7 +987,6 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงโครงสร้างแบบสอบถาม
      */
     private function render_survey_structure($structure, $response_data) {
-        error_log('TPAK Debug: [render_survey_structure] structure=' . print_r($structure, true));
         if (!is_array($structure) || !isset($structure['questions'])) {
             $this->render_survey_with_answers($response_data);
             return;
@@ -1143,7 +999,6 @@ class TPAK_DQ_Survey_Renderer {
             if ($saved_structure) {
                 // ใช้ saved structure แทน
                 $structure = array_merge($structure, $saved_structure);
-                error_log('TPAK Debug: Using saved survey structure for survey ' . $survey_id);
             }
         }
         
@@ -1251,7 +1106,6 @@ class TPAK_DQ_Survey_Renderer {
      * จัดกลุ่มคำถามตาม base code
      */
     private function group_questions_by_base($response_data) {
-        $this->write_debug_log('TPAK Debug: [group_questions_by_base] response_data=' . print_r($response_data, true));
         
         $groups = array();
         $processed = array();
@@ -1306,11 +1160,9 @@ class TPAK_DQ_Survey_Renderer {
         foreach ($groups as $base_code => $group) {
             if (!empty($group['items'])) {
                 $filtered_groups[$base_code] = $group;
-                $this->write_debug_log("TPAK Debug: [group_questions_by_base] Final group $base_code: " . print_r($group, true));
+                // Debug code removed for performance
             }
         }
-        
-        $this->write_debug_log("TPAK Debug: [group_questions_by_base] Final filtered_groups: " . print_r($filtered_groups, true));
         return $filtered_groups;
     }
     
@@ -1320,7 +1172,6 @@ class TPAK_DQ_Survey_Renderer {
     private function extract_base_code($key) {
         // สำหรับ C2t1, C2t2t2, C2t2t2t1, C2t4 ให้ใช้ key ทั้งหมดเป็น base_code
         if (preg_match('/^C2t\d+.*$/', $key)) {
-            $this->write_debug_log("TPAK Debug: [extract_base_code] key=$key -> base_code=$key (C2t pattern)");
             return $key;
         }
         
@@ -1328,19 +1179,16 @@ class TPAK_DQ_Survey_Renderer {
         // ตรวจสอบว่าเป็นคำถามที่มีตัวเลขต่อท้ายหรือไม่ (เช่น Q10, Q11, Q12) ก่อน
         if (preg_match('/^([A-Za-z]+)(\d+)(?:\[|_SQ|.*|$)/', $key, $matches)) {
             $base_code = $matches[1] . $matches[2]; // รวมตัวอักษรและตัวเลข
-            $this->write_debug_log("TPAK Debug: [extract_base_code] key=$key -> base_code=$base_code (with numbers)");
             return $base_code;
         }
         
         // ตรวจสอบ pattern ทั่วไป
         if (preg_match('/^([A-Za-z0-9]+?)(?:\[|_SQ|$)/', $key, $matches)) {
             $base_code = $matches[1];
-            $this->write_debug_log("TPAK Debug: [extract_base_code] key=$key -> base_code=$base_code");
             return $base_code;
         }
         
         // ถ้าไม่มี pattern พิเศษ ให้ใช้ key ทั้งหมด
-        $this->write_debug_log("TPAK Debug: [extract_base_code] key=$key -> base_code=$key (no match)");
         return $key;
     }
     
@@ -1348,8 +1196,6 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงกลุ่มคำถาม
      */
     private function render_question_group($base_code, $group_data, $question_info, $response_data) {
-        $this->write_debug_log('TPAK Debug: [render_question_group] base_code=' . print_r($base_code, true) . ' question_info=' . print_r($question_info, true));
-        $this->write_debug_log('TPAK Debug: [render_question_group] group_data=' . print_r($group_data, true));
         $items = $group_data['items'];
         $type = $group_data['type'];
         // รองรับ complex matrix/array (type ;, F, H, 1, :)
@@ -1819,7 +1665,6 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงคำถามและคำตอบ
      */
     private function render_questions_and_answers($questions, $response_data) {
-        $this->write_debug_log('TPAK Debug: [render_questions_and_answers] questions=' . print_r($questions, true));
         
         if (empty($questions)) {
             return;
@@ -3505,200 +3350,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         
         return 'คำถาม ' . $display_code;
-    }
-    
-    /**
-     * AJAX handler สำหรับดึง Survey Structure
-     */
-    public function ajax_get_survey_structure() {
-        // ตรวจสอบ nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'tpak_dq_nonce')) {
-            wp_die('Security check failed');
-        }
-        
-        $survey_id = sanitize_text_field($_POST['survey_id']);
-        
-        // ดึง Survey Structure (with caching)
-        $structure = null;
-        
-        // Try to get from cache first
-        if (class_exists('TPAK_DQ_Cache_Manager')) {
-            $cache_manager = new TPAK_DQ_Cache_Manager();
-            $structure = $cache_manager->get_cached_survey_structure($survey_id);
-        }
-        
-        // If not in cache, get from database
-        if (!$structure) {
-            $structure = TPAK_DQ_Survey_Structure_Manager::get_survey_structure($survey_id);
-            
-            // Cache the structure
-            if ($structure && class_exists('TPAK_DQ_Cache_Manager')) {
-                $cache_manager->cache_survey_structure($survey_id, $structure);
-            }
-        }
-        
-        if ($structure) {
-            // แปลงข้อมูลให้เข้ากับ Question Types Handler
-            $questions = $this->format_questions_for_handler($structure['questions']);
-            
-            // ใช้ Logic Manager เพื่อกรองคำถาม
-            if (class_exists('TPAK_DQ_Logic_Manager')) {
-                $response_data = $_POST['response_data'] ?? array();
-                $logic_manager = new TPAK_DQ_Logic_Manager($structure, $response_data);
-                $filtered_questions = $logic_manager->get_filtered_questions();
-                
-                // Apply piping to question titles
-                foreach ($filtered_questions as &$question) {
-                    if (!empty($question['title'])) {
-                        $question['title'] = $logic_manager->apply_piping($question['title'], $question['code']);
-                    }
-                    if (!empty($question['help'])) {
-                        $question['help'] = $logic_manager->apply_piping($question['help'], $question['code']);
-                    }
-                }
-                
-                $questions = $filtered_questions;
-            }
-            
-            wp_send_json_success(array('questions' => $questions));
-        } else {
-            wp_send_json_error('ไม่พบโครงสร้างแบบสอบถาม');
-        }
-    }
-    
-    /**
-     * AJAX handler สำหรับส่ง Survey
-     */
-    public function ajax_submit_survey() {
-        // ตรวจสอบ nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'tpak_dq_nonce')) {
-            wp_die('Security check failed');
-        }
-        
-        $survey_id = sanitize_text_field($_POST['survey_id']);
-        $answers = $_POST['answers'];
-        
-        // บันทึกคำตอบและอัพเดทสถานะ
-        $result = $this->save_survey_answers($survey_id, $answers);
-        
-        if ($result) {
-            // อัพเดทสถานะเป็น finalized
-            $post_id = $this->get_post_id_by_survey_id($survey_id);
-            if ($post_id) {
-                update_post_meta($post_id, '_tpak_workflow_status', 'finalized');
-            }
-            
-            wp_send_json_success('ส่งคำตอบเรียบร้อยแล้ว');
-        } else {
-            wp_send_json_error('เกิดข้อผิดพลาดในการส่งคำตอบ');
-        }
-    }
-    
-    /**
-     * แปลงข้อมูลคำถามให้เข้ากับ Question Types Handler
-     */
-    private function format_questions_for_handler($questions) {
-        $formatted_questions = array();
-        
-        foreach ($questions as $question) {
-            $formatted_question = array(
-                'code' => $question['qid'] ?? $question['code'] ?? '',
-                'title' => $question['question'] ?? $question['title'] ?? '',
-                'type' => $question['type'] ?? 'T',
-                'help' => $question['help'] ?? '',
-                'required' => isset($question['mandatory']) ? $question['mandatory'] === 'Y' : false,
-                'options' => array(),
-                'logic' => $question['logic'] ?? array()
-            );
-            
-            // แปลงตัวเลือกสำหรับ List และ Multiple Choice
-            if (in_array($question['type'], array('L', 'M', 'Y'))) {
-                $formatted_question['options'] = $this->format_answer_options($question);
-            }
-            
-            // เพิ่มข้อมูลเพิ่มเติมตามประเภทคำถาม
-            switch ($question['type']) {
-                case 'N':
-                    $formatted_question['min_value'] = $question['min_value'] ?? '';
-                    $formatted_question['max_value'] = $question['max_value'] ?? '';
-                    break;
-                case 'T':
-                case 'S':
-                case 'U':
-                    $formatted_question['max_length'] = $question['max_length'] ?? '';
-                    $formatted_question['placeholder'] = $question['placeholder'] ?? '';
-                    break;
-                case 'U':
-                    $formatted_question['rows'] = $question['rows'] ?? 5;
-                    break;
-            }
-            
-            $formatted_questions[] = $formatted_question;
-        }
-        
-        return $formatted_questions;
-    }
-    
-    /**
-     * แปลงตัวเลือกคำตอบ
-     */
-    private function format_answer_options($question) {
-        $options = array();
-        
-        // ดึงข้อมูลจาก LimeSurvey format
-        if (isset($question['answers'])) {
-            foreach ($question['answers'] as $answer) {
-                $options[] = array(
-                    'value' => $answer['code'] ?? $answer['value'] ?? '',
-                    'label' => $answer['answer'] ?? $answer['label'] ?? ''
-                );
-            }
-        }
-        
-        return $options;
-    }
-    
-    /**
-     * หา Post ID จาก Survey ID
-     */
-    private function get_post_id_by_survey_id($survey_id) {
-        global $wpdb;
-        
-        $post_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT post_id FROM {$wpdb->postmeta} 
-             WHERE meta_key = '_tpak_survey_id' 
-             AND meta_value = %s",
-            $survey_id
-        ));
-        
-        return $post_id;
-    }
-    
-    /**
-     * บันทึกคำตอบของ Survey
-     */
-    private function save_survey_answers($survey_id, $answers) {
-        $post_id = $this->get_post_id_by_survey_id($survey_id);
-        
-        if (!$post_id) {
-            return false;
-        }
-        
-        // ดึงข้อมูล response ที่มีอยู่
-        $response_data = get_post_meta($post_id, '_tpak_import_data', true);
-        if (!is_array($response_data)) {
-            $response_data = array();
-        }
-        
-        // อัปเดตคำตอบทั้งหมด
-        foreach ($answers as $question_code => $answer_value) {
-            if (!empty($answer_value)) {
-                $response_data[$question_code] = sanitize_text_field($answer_value);
-            }
-        }
-        
-        // บันทึกลงฐานข้อมูล
-        return update_post_meta($post_id, '_tpak_import_data', $response_data);
     }
 }
 

@@ -17,13 +17,8 @@ class TPAK_DQ_Workflow {
     }
     
 public function ajax_update_status() {
-    // Log request
-    error_log('TPAK Workflow: ajax_update_status called');
-    error_log('POST data: ' . print_r($_POST, true));
-    
     // Check nonce
     if (!check_ajax_referer('tpak_dq_nonce', 'nonce', false)) {
-        error_log('TPAK Workflow: Nonce check failed');
         wp_die('Security check failed');
     }
     
@@ -31,25 +26,20 @@ public function ajax_update_status() {
     $new_status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
     $comment = isset($_POST['comment']) ? sanitize_textarea_field($_POST['comment']) : '';
     
-    error_log("TPAK Workflow: post_id=$post_id, new_status=$new_status");
-    
     if (!$post_id || !$new_status) {
         wp_send_json_error('Invalid parameters');
     }
     
     // Check permissions
     if (!current_user_can('edit_post', $post_id)) {
-        error_log('TPAK Workflow: Permission denied for user ' . get_current_user_id());
         wp_send_json_error('Permission denied');
     }
     
     // Get current status
     $current_status = get_post_meta($post_id, '_tpak_workflow_status', true);
-    error_log("TPAK Workflow: current_status=$current_status");
     
     // Update status
     $updated = update_post_meta($post_id, '_tpak_workflow_status', $new_status);
-    error_log("TPAK Workflow: update_post_meta result=" . ($updated ? 'true' : 'false'));
     
     // Log the change
     $this->log_workflow_change($post_id, $current_status, $new_status, $comment);

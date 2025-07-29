@@ -1,0 +1,206 @@
+<?php
+/**
+ * เพิ่มใน class TPAK_DQ_Question_Handlers
+ * หรือสร้างไฟล์ใหม่ includes/class-tpak-dq-special-questions.php
+ */
+
+class TPAK_DQ_Special_Questions {
+    
+    /**
+     * ตรวจสอบและจัดการคำถามพิเศษ
+     */
+    public static function handle_special_questions($response_data) {
+        $special_patterns = array(
+            // Pattern สำหรับ A10-A17 (คำถามเกี่ยวกับจำนวน)
+            '/^A(1[0-7])$/' => 'number_question',
+            
+            // Pattern สำหรับ timeBegin, timeEnd
+            '/^time(Begin|End)/' => 'time_table',
+            
+            // Pattern สำหรับคำถามที่มี subquestions
+            '/^([A-Za-z]+\d+)SQ\d+$/' => 'subquestion',
+            
+            // Pattern สำหรับ ranking
+            '/^([A-Za-z]+\d+)\[(\d+)\]$/' => 'ranking'
+        );
+        
+        $handled_questions = array();
+        
+        foreach ($response_data as $key => $value) {
+            foreach ($special_patterns as $pattern => $type) {
+                if (preg_match($pattern, $key, $matches)) {
+                    $base_key = isset($matches[1]) ? $matches[1] : $key;
+                    
+                    if (!isset($handled_questions[$base_key])) {
+                        $handled_questions[$base_key] = array(
+                            'type' => $type,
+                            'data' => array()
+                        );
+                    }
+                    
+                    $handled_questions[$base_key]['data'][$key] = $value;
+                }
+            }
+        }
+        
+        return $handled_questions;
+    }
+    
+    /**
+     * Map คำถามกับคำอธิบาย
+     */
+    public static function get_question_descriptions() {
+        return array(
+            'A1' => 'ชื่อศูนย์/สถานที่',
+            'A2' => 'วันที่จัดกิจกรรม',
+            'A3' => 'ชื่อกิจกรรม/หลักสูตร',
+            'A3s1' => 'รหัสหลักสูตร',
+            'A4' => 'ชื่อวิทยากร',
+            'A5' => 'จำนวนชั่วโมงที่จัดจริง',
+            'A6' => 'จำนวนผู้เข้ารับบริการ',
+            'A7' => 'ประเภทกลุ่มเป้าหมาย',
+            'A8' => 'ระดับการศึกษา',
+            'A9' => 'อาชีพ',
+            'A10' => 'จำนวนผู้เข้ารับบริการที่มีอายุต่ำกว่า 15 ปี',
+            'A11' => 'จำนวนผู้เข้ารับบริการที่มีอายุ 15-59 ปี',
+            'A12' => 'จำนวนผู้เข้ารับบริการที่มีอายุ 60 ปีขึ้นไป',
+            'A13' => 'จำนวนผู้เข้ารับบริการที่เป็นผู้พิการ',
+            'A14' => 'จำนวนผู้เข้ารับบริการที่เป็นชาวต่างชาติ',
+            'A15' => 'จำนวนผู้เข้ารับบริการที่เป็นผู้ต้องขัง',
+            'A16' => 'จำนวนผู้เข้ารับบริการที่ติดตามจากปีที่ผ่านมา',
+            'A17' => 'จำนวนผู้เข้ารับบริการที่สำเร็จตามเกณฑ์',
+            'timeBegin' => 'ตารางเวลาเริ่มต้นการให้บริการ',
+            'timeEnd' => 'ตารางเวลาสิ้นสุดการให้บริการ'
+        );
+    }
+    
+    /**
+     * Render คำถามพิเศษ
+     */
+    public static function render_special_question($key, $data, $description = '') {
+        ?>
+        <div class="tpak-special-question">
+            <div class="tpak-question-header" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                <span class="tpak-question-key" style="font-family: monospace; color: #666; font-size: 12px;">
+                    <?php echo esc_html($key); ?>
+                </span>
+                <?php if ($description): ?>
+                    <strong style="margin-left: 10px;"><?php echo esc_html($description); ?></strong>
+                <?php endif; ?>
+            </div>
+            
+            <div class="tpak-question-content">
+                <?php
+                if (is_array($data) && count($data) > 1) {
+                    // ถ้ามีหลายค่า แสดงเป็นรายการ
+                    echo '<ul style="margin: 0; padding-left: 20px;">';
+                    foreach ($data as $sub_key => $value) {
+                        if (!empty($value) && $value !== 'N') {
+                            $sub_label = str_replace($key, '', $sub_key);
+                            echo '<li>';
+                            if ($sub_label) {
+                                echo '<span style="color: #666;">' . esc_html($sub_label) . ':</span> ';
+                            }
+                            echo '<strong>' . esc_html($value) . '</strong>';
+                            echo '</li>';
+                        }
+                    }
+                    echo '</ul>';
+                } else {
+                    // ค่าเดียว
+                    $value = is_array($data) ? reset($data) : $data;
+                    if (!empty($value) && $value !== 'N') {
+                        echo '<div style="padding: 10px; background: #e8f4f8; border-radius: 4px;">';
+                        echo '<strong style="color: #0073aa; font-size: 16px;">' . esc_html($value) . '</strong>';
+                        echo '</div>';
+                    } else {
+                        echo '<div style="color: #999; font-style: italic;">ไม่มีข้อมูล</div>';
+                    }
+                }
+                ?>
+            </div>
+        </div>
+        <?php
+    }
+}
+
+/**
+ * แก้ไขใน method render_survey_with_answers ของ class TPAK_DQ_Survey_Renderer
+ * เพื่อแสดงคำถามทั้งหมด
+ */
+private function render_questions_and_answers($questions, $response_data) {
+    if (empty($response_data)) {
+        return;
+    }
+    
+    // รับ descriptions
+    $descriptions = TPAK_DQ_Special_Questions::get_question_descriptions();
+    
+    ?>
+    <div class="tpak-question-group">
+        <h3 class="tpak-group-title">คำถามและคำตอบ</h3>
+        
+        <?php
+        // แสดงคำถาม A1-A9 (ข้อมูลพื้นฐาน)
+        echo '<div class="tpak-section" style="margin-bottom: 30px;">';
+        echo '<h4 style="background: #23282d; color: #fff; padding: 10px; margin: 15px 0;">ข้อมูลพื้นฐาน (A1-A9)</h4>';
+        
+        for ($i = 1; $i <= 9; $i++) {
+            $key = 'A' . $i;
+            if (isset($response_data[$key])) {
+                $desc = isset($descriptions[$key]) ? $descriptions[$key] : '';
+                TPAK_DQ_Special_Questions::render_special_question($key, $response_data[$key], $desc);
+            }
+            
+            // ตรวจสอบ sub-questions
+            foreach ($response_data as $k => $v) {
+                if (strpos($k, $key) === 0 && $k !== $key) {
+                    $desc = isset($descriptions[$k]) ? $descriptions[$k] : '';
+                    TPAK_DQ_Special_Questions::render_special_question($k, $v, $desc);
+                }
+            }
+        }
+        echo '</div>';
+        
+        // แสดงคำถาม A10-A17 (จำนวนผู้รับบริการ)
+        echo '<div class="tpak-section" style="margin-bottom: 30px;">';
+        echo '<h4 style="background: #23282d; color: #fff; padding: 10px; margin: 15px 0;">จำนวนผู้เข้ารับบริการ (A10-A17)</h4>';
+        
+        for ($i = 10; $i <= 17; $i++) {
+            $key = 'A' . $i;
+            if (isset($response_data[$key])) {
+                $desc = isset($descriptions[$key]) ? $descriptions[$key] : '';
+                TPAK_DQ_Special_Questions::render_special_question($key, $response_data[$key], $desc);
+            }
+        }
+        echo '</div>';
+        
+        // แสดงตารางเวลา
+        echo '<div class="tpak-section" style="margin-bottom: 30px;">';
+        echo '<h4 style="background: #23282d; color: #fff; padding: 10px; margin: 15px 0;">ตารางเวลาการให้บริการ</h4>';
+        
+        // ใช้ method ที่สร้างไว้สำหรับแสดงตาราง
+        foreach ($questions as $base_code => $group_data) {
+            if (strpos($base_code, 'time') === 0) {
+                $this->render_question_group($base_code, $group_data, null, $response_data);
+            }
+        }
+        echo '</div>';
+        
+        // แสดงคำถามอื่นๆ ที่เหลือ
+        echo '<div class="tpak-section">';
+        echo '<h4 style="background: #23282d; color: #fff; padding: 10px; margin: 15px 0;">ข้อมูลอื่นๆ</h4>';
+        
+        foreach ($questions as $base_code => $group_data) {
+            // ข้ามที่แสดงไปแล้ว
+            if (preg_match('/^A\d+/', $base_code) || strpos($base_code, 'time') === 0) {
+                continue;
+            }
+            
+            $this->render_question_group($base_code, $group_data, null, $response_data);
+        }
+        echo '</div>';
+        ?>
+    </div>
+    <?php
+}
