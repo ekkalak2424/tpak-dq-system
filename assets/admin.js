@@ -88,6 +88,80 @@ jQuery(document).ready(function($) {
         }
     });
     
+    // Submit for review functionality
+    $(document).on('click', '.tpak-submit-for-review', function() {
+        var button = $(this);
+        var postId = button.data('post-id');
+        var nonce = button.data('nonce');
+        
+        if (!confirm('คุณต้องการส่งคำตอบที่แก้ไขแล้วไปตรวจสอบหรือไม่?')) {
+            return;
+        }
+        
+        button.prop('disabled', true).text('กำลังส่ง...');
+        
+        $.ajax({
+            url: tpak_dq.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'tpak_submit_for_review',
+                post_id: postId,
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('ส่งไปตรวจสอบเรียบร้อยแล้ว');
+                    location.reload();
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + response.data);
+                    button.prop('disabled', false).text('ส่งไปตรวจสอบ');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
+                button.prop('disabled', false).text('ส่งไปตรวจสอบ');
+            }
+        });
+    });
+    
+    // Reset edited answers functionality
+    $(document).on('click', '.tpak-reset-answers', function() {
+        var button = $(this);
+        var postId = button.data('post-id');
+        var nonce = button.data('nonce');
+        
+        if (!confirm('คุณต้องการล้างคำตอบที่แก้ไขแล้วทั้งหมดหรือไม่?')) {
+            return;
+        }
+        
+        button.prop('disabled', true).text('กำลังล้าง...');
+        
+        $.ajax({
+            url: tpak_dq.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'tpak_reset_edited_answers',
+                post_id: postId,
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('ล้างคำตอบที่แก้ไขแล้วเรียบร้อย');
+                    location.reload();
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + response.data);
+                    button.prop('disabled', false).text('ล้างคำตอบที่แก้ไข');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
+                button.prop('disabled', false).text('ล้างคำตอบที่แก้ไข');
+            }
+        });
+    });
+    
     // Import functionality
     $('#tpak-import-btn').on('click', function() {
         var button = $(this);

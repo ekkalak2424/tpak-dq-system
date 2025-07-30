@@ -21,6 +21,8 @@ class TPAK_DQ_Survey_Renderer {
         add_action('wp_ajax_tpak_refresh_survey_structure', array($this, 'ajax_refresh_survey_structure'));
         add_action('wp_ajax_tpak_save_answer', array($this, 'ajax_save_answer'));
         add_action('wp_ajax_tpak_save_survey_answers', array($this, 'ajax_save_survey_answers'));
+        add_action('wp_ajax_tpak_reset_edited_answers', array($this, 'ajax_reset_edited_answers'));
+        add_action('wp_ajax_tpak_submit_for_review', array($this, 'ajax_submit_for_review'));
         
         // เพิ่ม Meta Box ใหม่
         add_action('add_meta_boxes', array($this, 'add_survey_preview_metabox'), 15);
@@ -64,15 +66,69 @@ class TPAK_DQ_Survey_Renderer {
     public function render_survey_preview_metabox($post) {
         $survey_id = get_post_meta($post->ID, '_tpak_survey_id', true);
         $response_data = get_post_meta($post->ID, '_tpak_import_data', true);
+        $edited_answers = get_post_meta($post->ID, '_tpak_edited_answers', true);
         $survey_structure = get_post_meta($post->ID, '_tpak_survey_structure', true);
+        
         if (!$survey_id) {
             echo '<p>ไม่พบข้อมูล Survey ID</p>';
             return;
         }
         
+        // รวมคำตอบที่แก้ไขแล้วเข้ากับข้อมูลเดิม
+        if (is_array($edited_answers) && !empty($edited_answers)) {
+            if (!is_array($response_data)) {
+                $response_data = array();
+            }
+            $response_data = array_merge($response_data, $edited_answers);
+        }
+        
         ?>
         <div class="tpak-survey-preview-wrapper">
             <?php $refresh_nonce = wp_create_nonce('tpak_survey_nonce'); ?>
+            <?php $save_nonce = wp_create_nonce('tpak_save_survey_answers'); ?>
+            
+            <!-- ปุ่มควบคุม -->
+            <div class="tpak-control-buttons" style="margin-bottom: 15px;">
+                <button type="button" class="button button-primary tpak-save-answers" 
+                        data-post-id="<?php echo esc_attr($post->ID); ?>" 
+                        data-nonce="<?php echo esc_attr($save_nonce); ?>">
+                    บันทึกคำตอบ
+                </button>
+                <button type="button" class="button tpak-reset-answers" 
+                        data-post-id="<?php echo esc_attr($post->ID); ?>" 
+                        data-nonce="<?php echo esc_attr($save_nonce); ?>">
+                    ล้างคำตอบที่แก้ไข
+                </button>
+                <?php if (!empty($edited_answers)): ?>
+                <button type="button" class="button button-secondary tpak-submit-for-review" 
+                        data-post-id="<?php echo esc_attr($post->ID); ?>" 
+                        data-nonce="<?php echo esc_attr($save_nonce); ?>">
+                    ส่งไปตรวจสอบ
+                </button>
+                <span class="tpak-edited-indicator" style="color: #0073aa; margin-left: 10px; font-weight: bold;">
+                    ✓ มีคำตอบที่แก้ไขแล้ว (<?php echo count($edited_answers); ?> รายการ)
+                </span>
+                <?php endif; ?>
+            </div>
+            
+            <!-- แสดงสถานะปัจจุบัน -->
+            <?php 
+            $current_status = get_post_meta($post->ID, '_tpak_workflow_status', true);
+            $status_labels = array(
+                '' => 'รอดำเนินการ',
+                'pending_a' => 'รอ Supervisor ตรวจสอบ',
+                'pending_b' => 'รอ Examiner ตรวจสอบ',
+                'pending_c' => 'รอการอนุมัติ',
+                'rejected_by_b' => 'ถูกส่งกลับโดย Supervisor',
+                'rejected_by_c' => 'ถูกส่งกลับโดย Examiner',
+                'edited' => 'แก้ไขแล้ว',
+                'finalized' => 'อนุมัติแล้ว'
+            );
+            $status_label = isset($status_labels[$current_status]) ? $status_labels[$current_status] : 'ไม่ทราบสถานะ';
+            ?>
+            <div class="tpak-current-status" style="margin-bottom: 15px; padding: 10px; background: #f0f0f1; border-radius: 4px;">
+                <strong>สถานะปัจจุบัน:</strong> <?php echo esc_html($status_label); ?>
+            </div>
             <style>
                 .tpak-survey-preview {
                     background: #fff;
@@ -729,25 +785,98 @@ class TPAK_DQ_Survey_Renderer {
             $response_data = array();
         }
         
+        // ดึงข้อมูลคำตอบที่แก้ไขแล้ว (ถ้ามี)
+        $edited_answers = get_post_meta($post_id, '_tpak_edited_answers', true);
+        if (!is_array($edited_answers)) {
+            $edited_answers = array();
+        }
+        
         // อัปเดตคำตอบทั้งหมด
         $updated_count = 0;
         
         foreach ($answers as $question_code => $answer_value) {
             if (!empty($answer_value)) {
-                $response_data[$question_code] = sanitize_text_field($answer_value);
+                // บันทึกคำตอบที่แก้ไขแล้วแยกต่างหาก
+                $edited_answers[$question_code] = sanitize_text_field($answer_value);
                 $updated_count++;
             }
         }
         
-        // บันทึกลงฐานข้อมูล
-        update_post_meta($post_id, '_tpak_import_data', $response_data);
+        // บันทึกคำตอบที่แก้ไขแล้ว
+        update_post_meta($post_id, '_tpak_edited_answers', $edited_answers);
         
         // ตรวจสอบว่ามีการอัปเดตหรือไม่
         if ($updated_count > 0) {
+            // อัปเดตสถานะเป็น "แก้ไขแล้ว" เพื่อให้ roles อื่นๆ ทราบ
+            $current_status = get_post_meta($post_id, '_tpak_workflow_status', true);
+            if ($current_status === 'pending_a' || $current_status === 'pending_b') {
+                update_post_meta($post_id, '_tpak_workflow_status', 'edited');
+            }
+            
             wp_send_json_success("บันทึกคำตอบ $updated_count รายการเรียบร้อย");
         } else {
             wp_send_json_success("ไม่มีคำตอบที่ต้องอัปเดต");
         }
+    }
+    
+    /**
+     * AJAX: Submit for review
+     */
+    public function ajax_submit_for_review() {
+        // ตรวจสอบ nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
+            wp_send_json_error('Security check failed');
+        }
+        
+        // ตรวจสอบข้อมูลที่จำเป็น
+        if (!isset($_POST['post_id'])) {
+            wp_send_json_error('Missing required data');
+        }
+        
+        $post_id = intval($_POST['post_id']);
+        
+        // ตรวจสอบสิทธิ์
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Permission denied');
+        }
+        
+        // ตรวจสอบว่ามีคำตอบที่แก้ไขแล้วหรือไม่
+        $edited_answers = get_post_meta($post_id, '_tpak_edited_answers', true);
+        if (empty($edited_answers)) {
+            wp_send_json_error('ไม่มีคำตอบที่แก้ไขแล้ว');
+        }
+        
+        // อัปเดตสถานะเป็น pending_b (รอ Examiner ตรวจสอบ)
+        update_post_meta($post_id, '_tpak_workflow_status', 'pending_b');
+        
+        wp_send_json_success("ส่งไปตรวจสอบเรียบร้อยแล้ว");
+    }
+    
+    /**
+     * AJAX: Reset edited answers
+     */
+    public function ajax_reset_edited_answers() {
+        // ตรวจสอบ nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
+            wp_send_json_error('Security check failed');
+        }
+        
+        // ตรวจสอบข้อมูลที่จำเป็น
+        if (!isset($_POST['post_id'])) {
+            wp_send_json_error('Missing required data');
+        }
+        
+        $post_id = intval($_POST['post_id']);
+        
+        // ตรวจสอบสิทธิ์
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Permission denied');
+        }
+        
+        // ลบคำตอบที่แก้ไขแล้ว
+        delete_post_meta($post_id, '_tpak_edited_answers');
+        
+        wp_send_json_success("ล้างคำตอบที่แก้ไขแล้วเรียบร้อย");
     }
     
     /**
@@ -1785,7 +1914,7 @@ class TPAK_DQ_Survey_Renderer {
                 <div class="tpak-text-input-wrapper">
                     <input type="text" 
                            name="<?php echo esc_attr($key); ?>" 
-                           value="<?php echo esc_attr($formatted_value); ?>" 
+                           value="<?php echo esc_attr($value); ?>" 
                            class="tpak-text-input tpak-answer-input"
                            data-question="<?php echo esc_attr($key); ?>"
                            placeholder="กรอกคำตอบ">

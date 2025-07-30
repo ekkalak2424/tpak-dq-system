@@ -88,6 +88,7 @@ public function ajax_update_status() {
             'pending_c' => 'รอการอนุมัติ',
             'rejected_by_b' => 'ถูกส่งกลับโดย Supervisor',
             'rejected_by_c' => 'ถูกส่งกลับโดย Examiner',
+            'edited' => 'แก้ไขแล้ว',
             'finalized' => 'อนุมัติแล้ว'
         );
         
