@@ -167,6 +167,15 @@ jQuery(document).ready(function($) {
         
         button.prop('disabled', true).text('กำลังบันทึก...');
         
+        console.log('TPAK Debug: About to send AJAX request');
+        console.log('TPAK Debug: AJAX URL:', tpak_dq.ajax_url);
+        console.log('TPAK Debug: AJAX data:', {
+                action: 'tpak_save_survey_answers',
+                post_id: postId,
+                answers: formData,
+                nonce: nonce
+            });
+        
         $.ajax({
             url: tpak_dq.ajax_url,
             type: 'POST',
@@ -178,17 +187,21 @@ jQuery(document).ready(function($) {
                 nonce: nonce
             },
             success: function(response) {
+                console.log('TPAK Debug: AJAX success response:', response);
                 if (response.success) {
+                    console.log('TPAK Debug: Save successful');
                     button.text('บันทึกแล้ว!').addClass('saved');
                     setTimeout(function() {
                         button.prop('disabled', false).text('บันทึกคำตอบ').removeClass('saved');
                     }, 2000);
                 } else {
+                    console.log('TPAK Debug: Save failed:', response.data);
                     alert('เกิดข้อผิดพลาด: ' + response.data);
                     button.prop('disabled', false).text('บันทึกคำตอบ');
                 }
             },
             error: function(xhr, status, error) {
+                console.log('TPAK Debug: AJAX error:', {xhr: xhr, status: status, error: error});
                 alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
                 button.prop('disabled', false).text('บันทึกคำตอบ');
             }
