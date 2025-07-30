@@ -22,7 +22,6 @@ class TPAK_DQ_Survey_Renderer {
         add_action('wp_ajax_tpak_save_answer', array($this, 'ajax_save_answer'));
         add_action('wp_ajax_tpak_save_survey_answers', array($this, 'ajax_save_survey_answers'));
         add_action('wp_ajax_tpak_reset_edited_answers', array($this, 'ajax_reset_edited_answers'));
-        add_action('wp_ajax_tpak_submit_for_review', array($this, 'ajax_submit_for_review'));
         
         // เพิ่ม Meta Box ใหม่
         add_action('add_meta_boxes', array($this, 'add_survey_preview_metabox'), 15);
@@ -79,7 +78,10 @@ class TPAK_DQ_Survey_Renderer {
             if (!is_array($response_data)) {
                 $response_data = array();
             }
-            $response_data = array_merge($response_data, $edited_answers);
+            // ใช้ edited_answers เป็นหลัก และรวมกับ response_data ที่ไม่มีใน edited_answers
+            foreach ($edited_answers as $key => $value) {
+                $response_data[$key] = $value;
+            }
         }
         
         ?>
@@ -100,11 +102,6 @@ class TPAK_DQ_Survey_Renderer {
                     ล้างคำตอบที่แก้ไข
                 </button>
                 <?php if (!empty($edited_answers)): ?>
-                <button type="button" class="button button-secondary tpak-submit-for-review" 
-                        data-post-id="<?php echo esc_attr($post->ID); ?>" 
-                        data-nonce="<?php echo esc_attr($save_nonce); ?>">
-                    ส่งไปตรวจสอบ
-                </button>
                 <span class="tpak-edited-indicator" style="color: #0073aa; margin-left: 10px; font-weight: bold;">
                     ✓ มีคำตอบที่แก้ไขแล้ว (<?php echo count($edited_answers); ?> รายการ)
                 </span>
@@ -128,6 +125,9 @@ class TPAK_DQ_Survey_Renderer {
             ?>
             <div class="tpak-current-status" style="margin-bottom: 15px; padding: 10px; background: #f0f0f1; border-radius: 4px;">
                 <strong>สถานะปัจจุบัน:</strong> <?php echo esc_html($status_label); ?>
+                <?php if (!empty($edited_answers)): ?>
+                <br><small>ข้อมูลที่แก้ไขแล้ว: <?php echo count($edited_answers); ?> รายการ</small>
+                <?php endif; ?>
             </div>
             <style>
                 .tpak-survey-preview {
@@ -617,101 +617,7 @@ class TPAK_DQ_Survey_Renderer {
             </div>
         </div>
         
-        <script>
-        jQuery(document).ready(function($){
-            // Refresh survey structure
-            $('.tpak-refresh-button').on('click', function(){
-                var button = $(this);
-                var surveyId = button.data('survey-id');
-                var postId = button.data('post-id');
-                var nonce = button.data('nonce');
-                
-                button.prop('disabled', true).text('กำลังดึงข้อมูล...');
-                
-                $.post(tpak_dq.ajax_url, {
-                        action: 'tpak_refresh_survey_structure',
-                        survey_id: surveyId,
-                        post_id: postId,
-                        nonce: nonce
-                }, function(response){
-                    if(response.success){
-                        $('#survey-preview-' + postId).html(response.data.html);
-                        button.prop('disabled', false).text('รีเฟรชโครงสร้างแบบสอบถาม');
-                        } else {
-                        alert('เกิดข้อผิดพลาด: ' + response.data);
-                        button.prop('disabled', false).text('รีเฟรชโครงสร้างแบบสอบถาม');
-                    }
-                });
-            });
-            
-            // Save survey answers
-            $('.tpak-save-answers').on('click', function(){
-                var button = $(this);
-                var postId = button.data('post-id');
-                var nonce = button.data('nonce');
-                
-                // Collect all form data - เฉพาะ input ที่เป็นคำตอบจริงๆ
-                var formData = {};
-                
-                $('.tpak-survey-preview .tpak-answer-input').each(function(){
-                    var name = $(this).attr('name');
-                    var value = $(this).val();
-                    
-                    if (name && value !== undefined) {
-                        formData[name] = value;
-                    }
-                });
-                
-                button.prop('disabled', true).text('กำลังบันทึก...');
-                
-                var ajaxData = {
-                    action: 'tpak_save_survey_answers',
-                    post_id: postId,
-                    answers: formData,
-                    nonce: nonce
-                };
-                
-                $.post(tpak_dq.ajax_url, ajaxData, function(response){
-                    if(response.success){
-                        button.text('บันทึกแล้ว!').addClass('saved');
-                        setTimeout(function(){
-                            button.prop('disabled', false).text('บันทึกคำตอบ').removeClass('saved');
-                        }, 2000);
-                    } else {
-                        alert('เกิดข้อผิดพลาด: ' + response.data);
-                        button.prop('disabled', false).text('บันทึกคำตอบ');
-                    }
-                }).fail(function(xhr, status, error) {
-                    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
-                    button.prop('disabled', false).text('บันทึกคำตอบ');
-                });
-            });
-            
-            // Auto-save for matrix inputs
-            $('.tpak-matrix-input').on('change', function(){
-                var input = $(this);
-                var postId = input.data('post-id');
-                var nonce = input.data('nonce');
-                var name = input.attr('name');
-                var value = input.val();
-                
-                $.post(ajaxurl, {
-                    action: 'tpak_auto_save_matrix',
-                    post_id: postId,
-                    field_name: name,
-                    field_value: value,
-                    nonce: nonce
-                }, function(response){
-                    if(response.success){
-                        input.addClass('saved');
-                        setTimeout(function(){
-                            input.removeClass('saved');
-                        }, 1000);
-                    }
-                });
-            });
-        });
-        </script>
+        <!-- JavaScript moved to admin.js to avoid conflicts -->
         <?php
     }
     
@@ -803,7 +709,12 @@ class TPAK_DQ_Survey_Renderer {
         }
         
         // บันทึกคำตอบที่แก้ไขแล้ว
-        update_post_meta($post_id, '_tpak_edited_answers', $edited_answers);
+        $saved = update_post_meta($post_id, '_tpak_edited_answers', $edited_answers);
+        
+        // Debug: ตรวจสอบว่าบันทึกสำเร็จหรือไม่
+        if (!$saved) {
+            wp_send_json_error('ไม่สามารถบันทึกข้อมูลได้');
+        }
         
         // ตรวจสอบว่ามีการอัปเดตหรือไม่
         if ($updated_count > 0) {
@@ -819,38 +730,7 @@ class TPAK_DQ_Survey_Renderer {
         }
     }
     
-    /**
-     * AJAX: Submit for review
-     */
-    public function ajax_submit_for_review() {
-        // ตรวจสอบ nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
-            wp_send_json_error('Security check failed');
-        }
-        
-        // ตรวจสอบข้อมูลที่จำเป็น
-        if (!isset($_POST['post_id'])) {
-            wp_send_json_error('Missing required data');
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        
-        // ตรวจสอบสิทธิ์
-        if (!current_user_can('edit_post', $post_id)) {
-            wp_send_json_error('Permission denied');
-        }
-        
-        // ตรวจสอบว่ามีคำตอบที่แก้ไขแล้วหรือไม่
-        $edited_answers = get_post_meta($post_id, '_tpak_edited_answers', true);
-        if (empty($edited_answers)) {
-            wp_send_json_error('ไม่มีคำตอบที่แก้ไขแล้ว');
-        }
-        
-        // อัปเดตสถานะเป็น pending_b (รอ Examiner ตรวจสอบ)
-        update_post_meta($post_id, '_tpak_workflow_status', 'pending_b');
-        
-        wp_send_json_success("ส่งไปตรวจสอบเรียบร้อยแล้ว");
-    }
+    // Function removed - no longer needed
     
     /**
      * AJAX: Reset edited answers

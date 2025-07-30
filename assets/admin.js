@@ -88,39 +88,87 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Submit for review functionality
-    $(document).on('click', '.tpak-submit-for-review', function() {
+    // Function removed - no longer needed
+    
+    // Refresh survey structure functionality
+    $(document).on('click', '.tpak-refresh-button', function() {
         var button = $(this);
+        var surveyId = button.data('survey-id');
         var postId = button.data('post-id');
         var nonce = button.data('nonce');
         
-        if (!confirm('คุณต้องการส่งคำตอบที่แก้ไขแล้วไปตรวจสอบหรือไม่?')) {
-            return;
-        }
-        
-        button.prop('disabled', true).text('กำลังส่ง...');
+        button.prop('disabled', true).text('กำลังดึงข้อมูล...');
         
         $.ajax({
             url: tpak_dq.ajax_url,
             type: 'POST',
             dataType: 'json',
             data: {
-                action: 'tpak_submit_for_review',
+                action: 'tpak_refresh_survey_structure',
+                survey_id: surveyId,
                 post_id: postId,
                 nonce: nonce
             },
             success: function(response) {
                 if (response.success) {
-                    alert('ส่งไปตรวจสอบเรียบร้อยแล้ว');
-                    location.reload();
+                    $('#survey-preview-' + postId).html(response.data.html);
+                    button.prop('disabled', false).text('ดึงคำถามจาก LimeSurvey');
                 } else {
                     alert('เกิดข้อผิดพลาด: ' + response.data);
-                    button.prop('disabled', false).text('ส่งไปตรวจสอบ');
+                    button.prop('disabled', false).text('ดึงคำถามจาก LimeSurvey');
                 }
             },
             error: function(xhr, status, error) {
                 alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
-                button.prop('disabled', false).text('ส่งไปตรวจสอบ');
+                button.prop('disabled', false).text('ดึงคำถามจาก LimeSurvey');
+            }
+        });
+    });
+    
+    // Save survey answers functionality
+    $(document).on('click', '.tpak-save-answers', function() {
+        var button = $(this);
+        var postId = button.data('post-id');
+        var nonce = button.data('nonce');
+        
+        // Collect all form data - เฉพาะ input ที่เป็นคำตอบจริงๆ
+        var formData = {};
+        
+        $('.tpak-survey-preview .tpak-answer-input').each(function() {
+            var name = $(this).attr('name');
+            var value = $(this).val();
+            
+            if (name && value !== undefined) {
+                formData[name] = value;
+            }
+        });
+        
+        button.prop('disabled', true).text('กำลังบันทึก...');
+        
+        $.ajax({
+            url: tpak_dq.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'tpak_save_survey_answers',
+                post_id: postId,
+                answers: formData,
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    button.text('บันทึกแล้ว!').addClass('saved');
+                    setTimeout(function() {
+                        button.prop('disabled', false).text('บันทึกคำตอบ').removeClass('saved');
+                    }, 2000);
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + response.data);
+                    button.prop('disabled', false).text('บันทึกคำตอบ');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
+                button.prop('disabled', false).text('บันทึกคำตอบ');
             }
         });
     });
