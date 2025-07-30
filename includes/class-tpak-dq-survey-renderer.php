@@ -79,6 +79,11 @@ class TPAK_DQ_Survey_Renderer {
             error_log('TPAK Debug: Raw edited_answers is not string, value: ' . var_export($edited_answers_raw, true));
         }
         
+        // Debug: ตรวจสอบว่าข้อมูลถูกอ่านหรือไม่
+        if (empty($edited_answers_raw)) {
+            error_log('TPAK Debug: No edited_answers_raw found');
+        }
+        
         // ตรวจสอบว่าเป็น JSON string หรือ array
         if (is_string($edited_answers_raw)) {
             $edited_answers = json_decode($edited_answers_raw, true);
@@ -120,6 +125,7 @@ class TPAK_DQ_Survey_Renderer {
         } else {
             error_log('TPAK Debug: No edited answers found');
             error_log('TPAK Debug: Original Q19 value: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
+            error_log('TPAK Debug: Original response_data count: ' . count($response_data));
         }
         
         ?>
@@ -803,6 +809,7 @@ class TPAK_DQ_Survey_Renderer {
         error_log('TPAK Debug: JSON data length: ' . strlen($json_data));
         error_log('TPAK Debug: JSON data sample: ' . substr($json_data, 0, 200));
         error_log('TPAK Debug: About to save to post_id: ' . $post_id);
+        error_log('TPAK Debug: About to save JSON: ' . $json_data);
         $saved = update_post_meta($post_id, '_tpak_edited_answers', $json_data);
         
         // Debug: ตรวจสอบว่าบันทึกสำเร็จหรือไม่
@@ -819,6 +826,8 @@ class TPAK_DQ_Survey_Renderer {
             if (is_string($saved_data)) {
                 error_log('TPAK Debug: Saved data length: ' . strlen($saved_data));
                 error_log('TPAK Debug: Saved data content: ' . substr($saved_data, 0, 200));
+            } else {
+                error_log('TPAK Debug: Saved data is not string: ' . var_export($saved_data, true));
             }
             
             // ตรวจสอบว่าข้อมูลถูกบันทึกจริงหรือไม่โดยการ decode
@@ -1173,6 +1182,13 @@ class TPAK_DQ_Survey_Renderer {
         // Debug: ตรวจสอบข้อมูลทั้งหมด
         error_log('TPAK Debug: Total response_data count: ' . count($response_data));
         error_log('TPAK Debug: Sample response_data keys: ' . implode(', ', array_slice(array_keys($response_data), 0, 10)));
+        
+        // Debug: ตรวจสอบข้อมูล Q19 ใน response_data
+        if (isset($response_data['Q19'])) {
+            error_log('TPAK Debug: Q19 value in response_data: ' . $response_data['Q19']);
+        } else {
+            error_log('TPAK Debug: Q19 not in response_data keys: ' . implode(', ', array_keys($response_data)));
+        }
         
         // เก็บ structure ไว้ใช้
         $this->question_labels = isset($structure['questions']) ? $structure['questions'] : array();
