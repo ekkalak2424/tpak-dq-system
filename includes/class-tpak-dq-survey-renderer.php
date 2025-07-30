@@ -74,6 +74,7 @@ class TPAK_DQ_Survey_Renderer {
         error_log('TPAK Debug: Raw edited_answers type: ' . gettype($edited_answers_raw));
         if (is_string($edited_answers_raw)) {
             error_log('TPAK Debug: Raw edited_answers length: ' . strlen($edited_answers_raw));
+            error_log('TPAK Debug: Raw edited_answers content: ' . substr($edited_answers_raw, 0, 200));
         }
         
         // ตรวจสอบว่าเป็น JSON string หรือ array
@@ -100,12 +101,20 @@ class TPAK_DQ_Survey_Renderer {
             }
             // ใช้ edited_answers เป็นหลัก และรวมกับ response_data ที่ไม่มีใน edited_answers
             foreach ($edited_answers as $key => $value) {
+                $old_value = isset($response_data[$key]) ? $response_data[$key] : 'not set';
                 $response_data[$key] = $value;
+                if ($key === 'Q19') {
+                    error_log('TPAK Debug: Q19 overwritten - old: ' . $old_value . ', new: ' . $value);
+                }
             }
             error_log('TPAK Debug: Merged edited answers. Total response_data count: ' . count($response_data));
             error_log('TPAK Debug: Sample merged data - Q19: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
             error_log('TPAK Debug: Edited answers count: ' . count($edited_answers));
             error_log('TPAK Debug: Edited answers keys: ' . implode(', ', array_keys($edited_answers)));
+            error_log('TPAK Debug: Original Q19 value: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
+            if (isset($edited_answers['Q19'])) {
+                error_log('TPAK Debug: Q19 will be overwritten with: ' . $edited_answers['Q19']);
+            }
         } else {
             error_log('TPAK Debug: No edited answers found');
         }
@@ -755,6 +764,11 @@ class TPAK_DQ_Survey_Renderer {
         error_log('TPAK Debug: Existing edited_answers count: ' . count($edited_answers));
         if (!empty($edited_answers)) {
             error_log('TPAK Debug: Existing edited_answers keys: ' . implode(', ', array_keys($edited_answers)));
+            if (isset($edited_answers['Q19'])) {
+                error_log('TPAK Debug: Q19 in edited_answers: ' . $edited_answers['Q19']);
+            } else {
+                error_log('TPAK Debug: Q19 not found in edited_answers');
+            }
         }
         
         // อัปเดตคำตอบทั้งหมด
@@ -1127,6 +1141,13 @@ class TPAK_DQ_Survey_Renderer {
             }
         }
         
+        // Debug: ตรวจสอบข้อมูล Q19 ก่อนส่งไป render
+        if (isset($response_data['Q19'])) {
+            error_log('TPAK Debug: Q19 in response_data before render: ' . $response_data['Q19']);
+        } else {
+            error_log('TPAK Debug: Q19 not found in response_data before render');
+        }
+        
         // เก็บ structure ไว้ใช้
         $this->question_labels = isset($structure['questions']) ? $structure['questions'] : array();
         $this->answer_options = isset($structure['answers']) ? $structure['answers'] : array();
@@ -1243,6 +1264,13 @@ class TPAK_DQ_Survey_Renderer {
         error_log('TPAK Debug: group_questions_by_base - response_data count: ' . count($response_data));
         error_log('TPAK Debug: Sample response_data in group - Q19: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
         
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if (isset($response_data['Q19'])) {
+            error_log('TPAK Debug: Q19 found in group_questions_by_base: ' . $response_data['Q19']);
+        } else {
+            error_log('TPAK Debug: Q19 not found in group_questions_by_base');
+        }
+        
         $groups = array();
         $processed = array();
         
@@ -1273,6 +1301,11 @@ class TPAK_DQ_Survey_Renderer {
             if (!empty($value) && $value !== 'N') {
                 $groups[$base_code]['items'][$key] = $value;
                 $processed[$key] = true;
+                
+                // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+                if ($key === 'Q19') {
+                    error_log('TPAK Debug: Q19 added to group ' . $base_code . ' with value: ' . $value);
+                }
             }
             
             // หาคำถามที่เกี่ยวข้อง
