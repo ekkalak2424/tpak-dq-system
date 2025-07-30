@@ -75,6 +75,8 @@ class TPAK_DQ_Survey_Renderer {
         if (is_string($edited_answers_raw)) {
             error_log('TPAK Debug: Raw edited_answers length: ' . strlen($edited_answers_raw));
             error_log('TPAK Debug: Raw edited_answers content: ' . substr($edited_answers_raw, 0, 200));
+        } else {
+            error_log('TPAK Debug: Raw edited_answers is not string, value: ' . var_export($edited_answers_raw, true));
         }
         
         // ตรวจสอบว่าเป็น JSON string หรือ array
@@ -117,6 +119,7 @@ class TPAK_DQ_Survey_Renderer {
             }
         } else {
             error_log('TPAK Debug: No edited answers found');
+            error_log('TPAK Debug: Original Q19 value: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
         }
         
         ?>
@@ -769,6 +772,8 @@ class TPAK_DQ_Survey_Renderer {
             } else {
                 error_log('TPAK Debug: Q19 not found in edited_answers');
             }
+        } else {
+            error_log('TPAK Debug: No edited_answers found');
         }
         
         // อัปเดตคำตอบทั้งหมด
@@ -797,6 +802,7 @@ class TPAK_DQ_Survey_Renderer {
         $json_data = json_encode($edited_answers);
         error_log('TPAK Debug: JSON data length: ' . strlen($json_data));
         error_log('TPAK Debug: JSON data sample: ' . substr($json_data, 0, 200));
+        error_log('TPAK Debug: About to save to post_id: ' . $post_id);
         $saved = update_post_meta($post_id, '_tpak_edited_answers', $json_data);
         
         // Debug: ตรวจสอบว่าบันทึกสำเร็จหรือไม่
@@ -812,6 +818,22 @@ class TPAK_DQ_Survey_Renderer {
             error_log('TPAK Debug: Saved data type: ' . gettype($saved_data));
             if (is_string($saved_data)) {
                 error_log('TPAK Debug: Saved data length: ' . strlen($saved_data));
+                error_log('TPAK Debug: Saved data content: ' . substr($saved_data, 0, 200));
+            }
+            
+            // ตรวจสอบว่าข้อมูลถูกบันทึกจริงหรือไม่โดยการ decode
+            if (is_string($saved_data)) {
+                $decoded_data = json_decode($saved_data, true);
+                if (is_array($decoded_data)) {
+                    error_log('TPAK Debug: Decoded data count: ' . count($decoded_data));
+                    if (isset($decoded_data['Q19'])) {
+                        error_log('TPAK Debug: Q19 in saved data: ' . $decoded_data['Q19']);
+                    } else {
+                        error_log('TPAK Debug: Q19 not found in saved data');
+                    }
+                } else {
+                    error_log('TPAK Debug: Failed to decode saved data');
+                }
             }
         }
         
@@ -1147,6 +1169,10 @@ class TPAK_DQ_Survey_Renderer {
         } else {
             error_log('TPAK Debug: Q19 not found in response_data before render');
         }
+        
+        // Debug: ตรวจสอบข้อมูลทั้งหมด
+        error_log('TPAK Debug: Total response_data count: ' . count($response_data));
+        error_log('TPAK Debug: Sample response_data keys: ' . implode(', ', array_slice(array_keys($response_data), 0, 10)));
         
         // เก็บ structure ไว้ใช้
         $this->question_labels = isset($structure['questions']) ? $structure['questions'] : array();
