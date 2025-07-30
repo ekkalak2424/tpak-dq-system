@@ -68,8 +68,20 @@ class TPAK_DQ_Survey_Renderer {
     public function render_survey_preview_metabox($post) {
         $survey_id = get_post_meta($post->ID, '_tpak_survey_id', true);
         $response_data = get_post_meta($post->ID, '_tpak_import_data', true);
-        $edited_answers = get_post_meta($post->ID, '_tpak_edited_answers', true);
+        $edited_answers_raw = get_post_meta($post->ID, '_tpak_edited_answers', true);
         $survey_structure = get_post_meta($post->ID, '_tpak_survey_structure', true);
+        
+        // ตรวจสอบว่าเป็น JSON string หรือ array
+        if (is_string($edited_answers_raw)) {
+            $edited_answers = json_decode($edited_answers_raw, true);
+            if (!is_array($edited_answers)) {
+                $edited_answers = array();
+            }
+        } elseif (is_array($edited_answers_raw)) {
+            $edited_answers = $edited_answers_raw;
+        } else {
+            $edited_answers = array();
+        }
         
         if (!$survey_id) {
             echo '<p>ไม่พบข้อมูล Survey ID</p>';
@@ -693,8 +705,13 @@ class TPAK_DQ_Survey_Renderer {
         $post_id = intval($_POST['post_id']);
         $answers = $_POST['answers'];
         
+        error_log('TPAK Debug: Post ID: ' . $post_id);
+        error_log('TPAK Debug: Answers type: ' . gettype($answers));
+        error_log('TPAK Debug: Answers count: ' . (is_array($answers) ? count($answers) : 'not array'));
+        
         // ตรวจสอบสิทธิ์
         if (!current_user_can('edit_post', $post_id)) {
+            error_log('TPAK Debug: Permission denied for post ' . $post_id);
             wp_send_json_error('Permission denied');
         }
         
@@ -705,28 +722,55 @@ class TPAK_DQ_Survey_Renderer {
         }
         
         // ดึงข้อมูลคำตอบที่แก้ไขแล้ว (ถ้ามี)
-        $edited_answers = get_post_meta($post_id, '_tpak_edited_answers', true);
-        if (!is_array($edited_answers)) {
+        $edited_answers_raw = get_post_meta($post_id, '_tpak_edited_answers', true);
+        
+        // ตรวจสอบว่าเป็น JSON string หรือ array
+        if (is_string($edited_answers_raw)) {
+            $edited_answers = json_decode($edited_answers_raw, true);
+            if (!is_array($edited_answers)) {
+                $edited_answers = array();
+            }
+        } elseif (is_array($edited_answers_raw)) {
+            $edited_answers = $edited_answers_raw;
+        } else {
             $edited_answers = array();
         }
+        
+        error_log('TPAK Debug: Existing edited_answers count: ' . count($edited_answers));
         
         // อัปเดตคำตอบทั้งหมด
         $updated_count = 0;
         
+        error_log('TPAK Debug: Processing answers...');
         foreach ($answers as $question_code => $answer_value) {
+            error_log('TPAK Debug: Processing ' . $question_code . ' = ' . $answer_value);
             if (!empty($answer_value)) {
                 // บันทึกคำตอบที่แก้ไขแล้วแยกต่างหาก
                 $edited_answers[$question_code] = sanitize_text_field($answer_value);
                 $updated_count++;
+                error_log('TPAK Debug: Updated ' . $question_code);
             }
         }
         
+        error_log('TPAK Debug: Final edited_answers count: ' . count($edited_answers));
+        
         // บันทึกคำตอบที่แก้ไขแล้ว
-        $saved = update_post_meta($post_id, '_tpak_edited_answers', $edited_answers);
+        error_log('TPAK Debug: About to save edited_answers...');
+        
+        // ลบข้อมูลเดิมก่อน
+        delete_post_meta($post_id, '_tpak_edited_answers');
+        
+        // บันทึกข้อมูลใหม่เป็น JSON string
+        $json_data = json_encode($edited_answers);
+        error_log('TPAK Debug: JSON data length: ' . strlen($json_data));
+        $saved = update_post_meta($post_id, '_tpak_edited_answers', $json_data);
         
         // Debug: ตรวจสอบว่าบันทึกสำเร็จหรือไม่
         error_log('TPAK Debug: Save result: ' . ($saved ? 'success' : 'failed'));
         if (!$saved) {
+            error_log('TPAK Debug: Failed to save - checking post existence');
+            $post_exists = get_post($post_id);
+            error_log('TPAK Debug: Post exists: ' . ($post_exists ? 'yes' : 'no'));
             wp_send_json_error('ไม่สามารถบันทึกข้อมูลได้');
         }
         
@@ -772,6 +816,7 @@ class TPAK_DQ_Survey_Renderer {
         
         // ลบคำตอบที่แก้ไขแล้ว
         delete_post_meta($post_id, '_tpak_edited_answers');
+        error_log('TPAK Debug: Reset edited answers for post ' . $post_id);
         
         wp_send_json_success("ล้างคำตอบที่แก้ไขแล้วเรียบร้อย");
     }
