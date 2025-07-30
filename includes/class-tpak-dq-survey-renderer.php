@@ -98,6 +98,7 @@ class TPAK_DQ_Survey_Renderer {
                 $response_data[$key] = $value;
             }
             error_log('TPAK Debug: Merged edited answers. Total response_data count: ' . count($response_data));
+            error_log('TPAK Debug: Sample merged data - Q19: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
         }
         
         ?>
@@ -1084,6 +1085,7 @@ class TPAK_DQ_Survey_Renderer {
     private function render_survey_structure($structure, $response_data) {
         // Debug: ตรวจสอบข้อมูลที่ส่งมา
         error_log('TPAK Debug: render_survey_structure - response_data count: ' . count($response_data));
+        error_log('TPAK Debug: Sample response_data - Q19: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
         
         if (!is_array($structure) || !isset($structure['questions'])) {
             $this->render_survey_with_answers($response_data);
@@ -1171,6 +1173,11 @@ class TPAK_DQ_Survey_Renderer {
                     // Debug: ตรวจสอบข้อมูลคำถาม
                     error_log('TPAK Debug: Processing question group - base_code: ' . $base_code . ', items count: ' . count($group_data['items']));
                     
+                    // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+                    if ($base_code === 'Q19') {
+                        error_log('TPAK Debug: Q19 group data: ' . print_r($group_data, true));
+                    }
+                    
                     // หาข้อมูลคำถามหลัก
                     $question_info = $this->find_question_info($base_code, $structure['questions']);
                     
@@ -1209,6 +1216,7 @@ class TPAK_DQ_Survey_Renderer {
     private function group_questions_by_base($response_data) {
         // Debug: ตรวจสอบข้อมูลที่ส่งมา
         error_log('TPAK Debug: group_questions_by_base - response_data count: ' . count($response_data));
+        error_log('TPAK Debug: Sample response_data in group - Q19: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
         
         $groups = array();
         $processed = array();
@@ -1301,6 +1309,11 @@ class TPAK_DQ_Survey_Renderer {
     private function render_question_group($base_code, $group_data, $question_info, $response_data) {
         // Debug: ตรวจสอบข้อมูลที่ส่งมา
         error_log('TPAK Debug: render_question_group - base_code: ' . $base_code . ', items: ' . print_r($group_data['items'], true));
+        
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if ($base_code === 'Q19') {
+            error_log('TPAK Debug: Q19 in render_question_group - items: ' . print_r($group_data['items'], true));
+        }
         
         $items = $group_data['items'];
         $type = $group_data['type'];
@@ -1439,6 +1452,12 @@ class TPAK_DQ_Survey_Renderer {
                 } else {
                     $main_value = reset($items);
                     error_log('TPAK Debug: render_question_group - main_value: ' . $main_value . ' for base_code: ' . $base_code);
+                    
+                    // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+                    if ($base_code === 'Q19') {
+                        error_log('TPAK Debug: Q19 main_value: ' . $main_value);
+                    }
+                    
                     $this->render_single_answer($main_value, $base_code, $question_info);
                 }
                 ?>
@@ -1850,6 +1869,11 @@ class TPAK_DQ_Survey_Renderer {
         // Debug: ตรวจสอบข้อมูลที่ส่งมา
         error_log('TPAK Debug: render_single_answer - key: ' . $key . ', value: ' . $value);
         
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if ($key === 'Q19') {
+            error_log('TPAK Debug: Q19 in render_single_answer - value: ' . $value);
+        }
+        
         if (empty($value) || $value === 'N') {
             echo '<div class="tpak-answer-empty">ไม่มีคำตอบ</div>';
             return;
@@ -1859,10 +1883,18 @@ class TPAK_DQ_Survey_Renderer {
         $formatted_value = $this->format_answer_value($value, $question_code, $question_info);
         error_log('TPAK Debug: formatted_value: ' . $formatted_value);
         
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if ($key === 'Q19') {
+            error_log('TPAK Debug: Q19 formatted_value: ' . $formatted_value);
+        }
+        
         // สร้าง answer options แบบ hardcode สำหรับคำถามที่รู้จัก
         $hardcoded_options = $this->get_hardcoded_answer_options($question_code);
         
-        // Debug code removed for performance
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if ($question_code === 'Q19') {
+            error_log('TPAK Debug: Q19 hardcoded_options: ' . print_r($hardcoded_options, true));
+        }
         
         ?>
         <div class="tpak-answer-display">
@@ -1915,7 +1947,10 @@ class TPAK_DQ_Survey_Renderer {
     private function get_hardcoded_answer_options($question_code) {
         $options = array();
         
-        // Debug code removed for performance
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if ($question_code === 'Q19') {
+            error_log('TPAK Debug: get_hardcoded_answer_options called for Q19');
+        }
         
         // Q1 - เพศ (List radio)
         if ($question_code === 'Q1') {
@@ -2010,6 +2045,16 @@ class TPAK_DQ_Survey_Renderer {
             $options = array(
                 '1' => '1. ข้อมูลที่อยู่',
                 '2' => '2. ข้อมูลที่อยู่'
+            );
+        }
+        // Q19 - ความพึงพอใจ
+        elseif ($question_code === 'Q19') {
+            $options = array(
+                '1' => '1. พึงพอใจมาก',
+                '2' => '2. พึงพอใจ',
+                '3' => '3. ไม่พึงพอใจ/ไม่แน่ใจ',
+                '4' => '4. ไม่พึงพอใจ',
+                '5' => '5. ไม่พึงพอใจมาก'
             );
         }
         // C2t1 - รหัสจังหวัด
@@ -2175,10 +2220,18 @@ class TPAK_DQ_Survey_Renderer {
             return '';
         }
         
-        // Debug code removed for performance
+        // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+        if ($question_code === 'Q19') {
+            error_log('TPAK Debug: format_answer_value - Q19 value: ' . $value);
+        }
         
         // ลองหาจาก answer options ก่อน
         if ($question_info && isset($question_info['answer_options'])) {
+            // Debug: ตรวจสอบข้อมูล Q19 โดยเฉพาะ
+            if ($question_code === 'Q19') {
+                error_log('TPAK Debug: Q19 answer_options: ' . print_r($question_info['answer_options'], true));
+            }
+            
             // ตรวจสอบ answer options โดยตรง
             if (isset($question_info['answer_options'][$value])) {
                 return $question_info['answer_options'][$value];
