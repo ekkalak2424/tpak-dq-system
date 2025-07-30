@@ -66,7 +66,6 @@ class TPAK_DQ_LimeSurvey_Question_Mapper {
             return $structure;
             
         } catch (Exception $e) {
-            error_log('TPAK LimeSurvey Mapper Error: ' . $e->getMessage());
             return false;
         }
     }
@@ -92,7 +91,7 @@ class TPAK_DQ_LimeSurvey_Question_Mapper {
                 }
             }
         } catch (Exception $e) {
-            error_log('Error getting groups: ' . $e->getMessage());
+            // Error handled silently for performance
         }
         
         return $groups;
@@ -183,7 +182,7 @@ class TPAK_DQ_LimeSurvey_Question_Mapper {
             }
             
         } catch (Exception $e) {
-            error_log('Error processing questions: ' . $e->getMessage());
+            // Error handled silently for performance
         }
         
         return compact('main_questions', 'subquestions', 'answer_options', 'attributes');
@@ -240,7 +239,7 @@ class TPAK_DQ_LimeSurvey_Question_Mapper {
             }
             
         } catch (Exception $e) {
-            error_log('Error getting answer options for QID ' . $qid . ': ' . $e->getMessage());
+            // Error handled silently for performance
         }
         
         return $options;
@@ -269,7 +268,7 @@ class TPAK_DQ_LimeSurvey_Question_Mapper {
             }
             
         } catch (Exception $e) {
-            error_log('Error getting attributes for QID ' . $qid . ': ' . $e->getMessage());
+            // Error handled silently for performance
         }
         
         return $attributes;

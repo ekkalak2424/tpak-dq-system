@@ -921,7 +921,6 @@ class TPAK_DQ_Survey_Renderer {
             return $structure;
             
         } catch (Exception $e) {
-            error_log('TPAK Survey Structure Error: ' . $e->getMessage());
             return false;
         }
     }
@@ -977,7 +976,7 @@ class TPAK_DQ_Survey_Renderer {
             }
             
         } catch (Exception $e) {
-            error_log('TPAK Get Answer Options Error: ' . $e->getMessage());
+            // Error handled silently for performance
         }
         
         return array();
@@ -1736,9 +1735,7 @@ class TPAK_DQ_Survey_Renderer {
     private function render_single_answer($value, $question_code = '', $question_info = null) {
         $key = $question_code;
         
-        // Debug log
-        $this->write_debug_log("TPAK Debug - render_single_answer: code=$question_code, value=$value");
-        $this->write_debug_log("TPAK Debug - question_info: " . print_r($question_info, true));
+        // Debug code removed for performance
         
         if (empty($value) || $value === 'N') {
             echo '<div class="tpak-answer-empty">ไม่มีคำตอบ</div>';
@@ -1751,8 +1748,7 @@ class TPAK_DQ_Survey_Renderer {
         // สร้าง answer options แบบ hardcode สำหรับคำถามที่รู้จัก
         $hardcoded_options = $this->get_hardcoded_answer_options($question_code);
         
-        // Debug log
-        $this->write_debug_log("TPAK Debug - hardcoded_options: " . print_r($hardcoded_options, true));
+        // Debug code removed for performance
         
         ?>
         <div class="tpak-answer-display">
@@ -1760,9 +1756,7 @@ class TPAK_DQ_Survey_Renderer {
             $has_api_options = $question_info && isset($question_info['answer_options']) && is_array($question_info['answer_options']);
             $has_hardcoded_options = !empty($hardcoded_options);
             
-            // Debug log
-            $this->write_debug_log("TPAK Debug - has_api_options: " . ($has_api_options ? 'true' : 'false'));
-            $this->write_debug_log("TPAK Debug - has_hardcoded_options: " . ($has_hardcoded_options ? 'true' : 'false'));
+            // Debug code removed for performance
             
             if ($has_api_options || $has_hardcoded_options): 
             ?>
@@ -1807,12 +1801,10 @@ class TPAK_DQ_Survey_Renderer {
     private function get_hardcoded_answer_options($question_code) {
         $options = array();
         
-        // Debug log
-        $this->write_debug_log("TPAK Debug - get_hardcoded_answer_options: code=$question_code");
+        // Debug code removed for performance
         
         // Q1 - เพศ (List radio)
         if ($question_code === 'Q1') {
-            $this->write_debug_log("TPAK Debug - Found Q1 match (List radio)");
             $options = array(
                 '1' => '1. ชาย',
                 '2' => '2. หญิง',
@@ -1821,7 +1813,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // Q1s1 - เพศสภาวะ
         elseif ($question_code === 'Q1s1') {
-            $this->write_debug_log("TPAK Debug - Found Q1s1 match");
             $options = array(
                 '1' => '1. ชาย',
                 '2' => '2. หญิง',
@@ -1830,7 +1821,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // Q10 - สุขภาพ
         elseif ($question_code === 'Q10') {
-            $this->write_debug_log("TPAK Debug - Found Q10 match");
             $options = array(
                 '1' => '1. ใช่',
                 '2' => '2. ไม่ใช่'
@@ -1859,7 +1849,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // Q12s1[5] - การบริโภคอาหาร - อาหารหลัก (รายการที่ 5)
         elseif ($question_code === 'Q12s1[5]') {
-            $this->write_debug_log("TPAK Debug - Found Q12s1[5] match");
             $options = array(
                 '1' => '1. ใช่',
                 '2' => '2. ไม่ใช่'
@@ -1888,7 +1877,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // CC2 - การเปลี่ยนแปลงภูมิอากาศ
         elseif ($question_code === 'CC2') {
-            $this->write_debug_log("TPAK Debug - Found CC2 match");
             $options = array(
                 '1' => '1. อากาศร้อน (อุณหภูมิสูง)',
                 '2' => '2. มีแสงแดดที่แรงจัด',
@@ -1905,7 +1893,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2 - ข้อมูลที่อยู่
         elseif ($question_code === 'C2') {
-            $this->write_debug_log("TPAK Debug - Found C2 match");
             $options = array(
                 '1' => '1. ข้อมูลที่อยู่',
                 '2' => '2. ข้อมูลที่อยู่'
@@ -1913,7 +1900,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2t1 - รหัสจังหวัด
         elseif ($question_code === 'C2t1') {
-            $this->write_debug_log("TPAK Debug - Found C2t1 match");
             $options = array(
                 '1' => '1. กรุงเทพมหานคร',
                 '2' => '2. ลำปาง',
@@ -1932,7 +1918,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2t2 - รหัสอำเภอ
         elseif ($question_code === 'C2t2') {
-            $this->write_debug_log("TPAK Debug - Found C2t2 match");
             $options = array(
                 '1' => '1. อำเภอเมือง',
                 '2' => '2. อำเภอแม่พริก',
@@ -1951,7 +1936,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2t3 - รหัสตำบล
         elseif ($question_code === 'C2t3') {
-            $this->write_debug_log("TPAK Debug - Found C2t3 match");
             $options = array(
                 '1' => '1. ป้อมปราบศัตรูพ่าย',
                 '2' => '2. ตลิ่งชัน',
@@ -1972,7 +1956,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2t4 - หมู่ที่
         elseif ($question_code === 'C2t4') {
-            $this->write_debug_log("TPAK Debug - Found C2t4 match");
             $options = array(
                 '1' => '1. หมู่ที่ 1',
                 '2' => '2. หมู่ที่ 2',
@@ -1988,7 +1971,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2t2t2 - รหัสอำเภอ ของจังหวัดลำปาง
         elseif ($question_code === 'C2t2t2') {
-            $this->write_debug_log("TPAK Debug - Found C2t2t2 match");
             $options = array(
                 '1' => '1. อำเภอเมืองลำปาง',
                 '2' => '2. อำเภอแม่พริก',
@@ -2007,7 +1989,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // C2t2t2t1 - รหัสตำบล ของอำเภอแม่พริก จังหวัดลำปาง
         elseif ($question_code === 'C2t2t2t1') {
-            $this->write_debug_log("TPAK Debug - Found C2t2t2t1 match");
             $options = array(
                 '1' => '1. ตำบลแม่พริก',
                 '2' => '2. ตำบลแม่ปุ',
@@ -2023,7 +2004,6 @@ class TPAK_DQ_Survey_Renderer {
         }
         // CC2s1 - ผลกระทบต่อกิจกรรมทางกายกลางแจ้ง
         elseif ($question_code === 'CC2s1') {
-            $this->write_debug_log("TPAK Debug - Found CC2s1 match");
             $options = array(
                 '1' => '1. มี',
                 '2' => '2. ไม่มี',
@@ -2031,7 +2011,6 @@ class TPAK_DQ_Survey_Renderer {
             );
         }
         
-        $this->write_debug_log("TPAK Debug - Final options: " . print_r($options, true));
         return $options;
     }
     
@@ -2082,21 +2061,18 @@ class TPAK_DQ_Survey_Renderer {
             return '';
         }
         
-        // Debug log
-        error_log("TPAK Debug - format_answer_value: code=$question_code, value=$value");
+        // Debug code removed for performance
         
         // ลองหาจาก answer options ก่อน
         if ($question_info && isset($question_info['answer_options'])) {
             // ตรวจสอบ answer options โดยตรง
             if (isset($question_info['answer_options'][$value])) {
-                error_log("TPAK Debug - Found direct answer option: " . $question_info['answer_options'][$value]);
                 return $question_info['answer_options'][$value];
             }
             
             // ลองหาแบบ case insensitive
             foreach ($question_info['answer_options'] as $code => $text) {
                 if (strcasecmp($code, $value) == 0) {
-                    error_log("TPAK Debug - Found case-insensitive answer: $text");
                     return $text;
                 }
             }

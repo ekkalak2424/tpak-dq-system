@@ -196,8 +196,7 @@ class TPAK_DQ_Survey_Structure_Manager {
             wp_send_json_error('ไม่สามารถอ่านไฟล์ได้');
         }
         
-        error_log('TPAK Debug: LSS file size: ' . strlen($content) . ' bytes');
-        error_log('TPAK Debug: First 50 chars: ' . substr($content, 0, 50));
+        // Debug code removed for performance
         
         // Parse LSS
         $structure = $this->parse_lss_file($content);
@@ -226,12 +225,9 @@ class TPAK_DQ_Survey_Structure_Manager {
         $decoded = base64_decode($content, true);
         
         if (!$decoded) {
-            error_log('TPAK Debug: Failed to base64 decode LSS file');
-            
             // Try to decode without strict mode
             $decoded = base64_decode($content);
             if (!$decoded) {
-                error_log('TPAK Debug: Failed to decode even without strict mode');
                 return false;
             }
         }
@@ -239,8 +235,7 @@ class TPAK_DQ_Survey_Structure_Manager {
         // Remove any BOM from decoded content
         $decoded = str_replace("\xEF\xBB\xBF", '', $decoded);
         
-        // Log first 100 chars to debug
-        error_log('TPAK Debug: First 100 chars of decoded: ' . substr($decoded, 0, 100));
+        // Debug code removed for performance
         
         // Try to parse XML
         libxml_use_internal_errors(true);
@@ -248,17 +243,12 @@ class TPAK_DQ_Survey_Structure_Manager {
         
         if (!$xml) {
             $errors = libxml_get_errors();
-            foreach ($errors as $error) {
-                error_log('TPAK Debug XML Error: ' . $error->message);
-            }
             libxml_clear_errors();
             
             // Try alternative parsing - maybe it's not base64 encoded
-            error_log('TPAK Debug: Trying to parse as direct XML');
             $xml = simplexml_load_string($content);
             
             if (!$xml) {
-                error_log('TPAK Debug: Failed to parse as direct XML too');
                 return false;
             }
         }
@@ -276,8 +266,6 @@ class TPAK_DQ_Survey_Structure_Manager {
         }
         
         if (!$survey_info) {
-            error_log('TPAK Debug: Cannot find survey info in XML structure');
-            error_log('TPAK Debug: XML structure: ' . print_r($xml, true));
             return false;
         }
         
@@ -285,7 +273,6 @@ class TPAK_DQ_Survey_Structure_Manager {
                     (isset($survey_info->surveyid) ? (string)$survey_info->surveyid : '');
         
         if (!$survey_id) {
-            error_log('TPAK Debug: Cannot find survey ID');
             return false;
         }
         
