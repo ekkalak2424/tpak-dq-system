@@ -141,6 +141,7 @@ jQuery(document).ready(function($) {
         console.log('TPAK Debug: Save answers button clicked');
         console.log('TPAK Debug: Button element:', this);
         console.log('TPAK Debug: Button class:', $(this).attr('class'));
+        console.log('TPAK Debug: Event object:', e);
         var button = $(this);
         var postId = button.data('post-id');
         var nonce = button.data('nonce');
@@ -179,6 +180,7 @@ jQuery(document).ready(function($) {
             return;
         }
         
+        console.log('TPAK Debug: About to disable button and start AJAX');
         button.prop('disabled', true).text('กำลังบันทึก...');
         
         console.log('TPAK Debug: About to send AJAX request');
@@ -190,6 +192,7 @@ jQuery(document).ready(function($) {
                 nonce: nonce
             });
         console.log('TPAK Debug: tpak_dq object:', tpak_dq);
+        console.log('TPAK Debug: About to call $.ajax()');
         
         $.ajax({
             url: tpak_dq.ajax_url,
@@ -217,6 +220,8 @@ jQuery(document).ready(function($) {
             },
             error: function(xhr, status, error) {
                 console.log('TPAK Debug: AJAX error:', {xhr: xhr, status: status, error: error});
+                console.log('TPAK Debug: AJAX error details - xhr.status:', xhr.status);
+                console.log('TPAK Debug: AJAX error details - xhr.responseText:', xhr.responseText);
                 alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error);
                 button.prop('disabled', false).text('บันทึกคำตอบ');
             }
