@@ -97,6 +97,7 @@ class TPAK_DQ_Survey_Renderer {
             foreach ($edited_answers as $key => $value) {
                 $response_data[$key] = $value;
             }
+            error_log('TPAK Debug: Merged edited answers. Total response_data count: ' . count($response_data));
         }
         
         ?>
@@ -1081,6 +1082,9 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงโครงสร้างแบบสอบถาม
      */
     private function render_survey_structure($structure, $response_data) {
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: render_survey_structure - response_data count: ' . count($response_data));
+        
         if (!is_array($structure) || !isset($structure['questions'])) {
             $this->render_survey_with_answers($response_data);
             return;
@@ -1164,6 +1168,9 @@ class TPAK_DQ_Survey_Renderer {
                 
                 // แสดงคำถามแบบจัดกลุ่ม
                 foreach ($question_groups as $base_code => $group_data) {
+                    // Debug: ตรวจสอบข้อมูลคำถาม
+                    error_log('TPAK Debug: Processing question group - base_code: ' . $base_code . ', items count: ' . count($group_data['items']));
+                    
                     // หาข้อมูลคำถามหลัก
                     $question_info = $this->find_question_info($base_code, $structure['questions']);
                     
@@ -1200,6 +1207,8 @@ class TPAK_DQ_Survey_Renderer {
      * จัดกลุ่มคำถามตาม base code
      */
     private function group_questions_by_base($response_data) {
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: group_questions_by_base - response_data count: ' . count($response_data));
         
         $groups = array();
         $processed = array();
@@ -1290,6 +1299,9 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงกลุ่มคำถาม
      */
     private function render_question_group($base_code, $group_data, $question_info, $response_data) {
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: render_question_group - base_code: ' . $base_code . ', items: ' . print_r($group_data['items'], true));
+        
         $items = $group_data['items'];
         $type = $group_data['type'];
         // รองรับ complex matrix/array (type ;, F, H, 1, :)
@@ -1425,7 +1437,9 @@ class TPAK_DQ_Survey_Renderer {
                         <?php
                     }
                 } else {
-                    $this->render_single_answer(reset($items), $base_code, $question_info);
+                    $main_value = reset($items);
+                    error_log('TPAK Debug: render_question_group - main_value: ' . $main_value . ' for base_code: ' . $base_code);
+                    $this->render_single_answer($main_value, $base_code, $question_info);
                 }
                 ?>
             </div>
@@ -1542,6 +1556,9 @@ class TPAK_DQ_Survey_Renderer {
      * แสดงคำถามพร้อมคำตอบ
      */
     private function render_question_with_answer($key, $value, $question_info, $response_data) {
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: render_question_with_answer - key: ' . $key . ', value: ' . $value);
+        
         ?>
         <div class="tpak-question-item">
             <!-- ซ่อนการแสดงรหัสคำถาม -->
@@ -1830,7 +1847,8 @@ class TPAK_DQ_Survey_Renderer {
     private function render_single_answer($value, $question_code = '', $question_info = null) {
         $key = $question_code;
         
-        // Debug code removed for performance
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: render_single_answer - key: ' . $key . ', value: ' . $value);
         
         if (empty($value) || $value === 'N') {
             echo '<div class="tpak-answer-empty">ไม่มีคำตอบ</div>';
@@ -1839,6 +1857,7 @@ class TPAK_DQ_Survey_Renderer {
         
         // จัดรูปแบบค่าคำตอบ
         $formatted_value = $this->format_answer_value($value, $question_code, $question_info);
+        error_log('TPAK Debug: formatted_value: ' . $formatted_value);
         
         // สร้าง answer options แบบ hardcode สำหรับคำถามที่รู้จัก
         $hardcoded_options = $this->get_hardcoded_answer_options($question_code);
@@ -1880,7 +1899,7 @@ class TPAK_DQ_Survey_Renderer {
                 <div class="tpak-text-input-wrapper">
                     <input type="text" 
                            name="<?php echo esc_attr($key); ?>" 
-                           value="<?php echo esc_attr($value); ?>" 
+                           value="<?php echo esc_attr($formatted_value); ?>" 
                            class="tpak-text-input tpak-answer-input"
                            data-question="<?php echo esc_attr($key); ?>"
                            placeholder="กรอกคำตอบ">
