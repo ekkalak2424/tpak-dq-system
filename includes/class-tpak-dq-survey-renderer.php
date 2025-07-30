@@ -71,6 +71,11 @@ class TPAK_DQ_Survey_Renderer {
         $edited_answers_raw = get_post_meta($post->ID, '_tpak_edited_answers', true);
         $survey_structure = get_post_meta($post->ID, '_tpak_survey_structure', true);
         
+        error_log('TPAK Debug: Raw edited_answers type: ' . gettype($edited_answers_raw));
+        if (is_string($edited_answers_raw)) {
+            error_log('TPAK Debug: Raw edited_answers length: ' . strlen($edited_answers_raw));
+        }
+        
         // ตรวจสอบว่าเป็น JSON string หรือ array
         if (is_string($edited_answers_raw)) {
             $edited_answers = json_decode($edited_answers_raw, true);
@@ -99,6 +104,10 @@ class TPAK_DQ_Survey_Renderer {
             }
             error_log('TPAK Debug: Merged edited answers. Total response_data count: ' . count($response_data));
             error_log('TPAK Debug: Sample merged data - Q19: ' . (isset($response_data['Q19']) ? $response_data['Q19'] : 'not found'));
+            error_log('TPAK Debug: Edited answers count: ' . count($edited_answers));
+            error_log('TPAK Debug: Edited answers keys: ' . implode(', ', array_keys($edited_answers)));
+        } else {
+            error_log('TPAK Debug: No edited answers found');
         }
         
         ?>
@@ -726,6 +735,11 @@ class TPAK_DQ_Survey_Renderer {
         // ดึงข้อมูลคำตอบที่แก้ไขแล้ว (ถ้ามี)
         $edited_answers_raw = get_post_meta($post_id, '_tpak_edited_answers', true);
         
+        error_log('TPAK Debug: Save - Raw edited_answers type: ' . gettype($edited_answers_raw));
+        if (is_string($edited_answers_raw)) {
+            error_log('TPAK Debug: Save - Raw edited_answers length: ' . strlen($edited_answers_raw));
+        }
+        
         // ตรวจสอบว่าเป็น JSON string หรือ array
         if (is_string($edited_answers_raw)) {
             $edited_answers = json_decode($edited_answers_raw, true);
@@ -739,6 +753,9 @@ class TPAK_DQ_Survey_Renderer {
         }
         
         error_log('TPAK Debug: Existing edited_answers count: ' . count($edited_answers));
+        if (!empty($edited_answers)) {
+            error_log('TPAK Debug: Existing edited_answers keys: ' . implode(', ', array_keys($edited_answers)));
+        }
         
         // อัปเดตคำตอบทั้งหมด
         $updated_count = 0;
@@ -765,6 +782,7 @@ class TPAK_DQ_Survey_Renderer {
         // บันทึกข้อมูลใหม่เป็น JSON string
         $json_data = json_encode($edited_answers);
         error_log('TPAK Debug: JSON data length: ' . strlen($json_data));
+        error_log('TPAK Debug: JSON data sample: ' . substr($json_data, 0, 200));
         $saved = update_post_meta($post_id, '_tpak_edited_answers', $json_data);
         
         // Debug: ตรวจสอบว่าบันทึกสำเร็จหรือไม่
@@ -774,6 +792,13 @@ class TPAK_DQ_Survey_Renderer {
             $post_exists = get_post($post_id);
             error_log('TPAK Debug: Post exists: ' . ($post_exists ? 'yes' : 'no'));
             wp_send_json_error('ไม่สามารถบันทึกข้อมูลได้');
+        } else {
+            // ตรวจสอบว่าข้อมูลถูกบันทึกจริงหรือไม่
+            $saved_data = get_post_meta($post_id, '_tpak_edited_answers', true);
+            error_log('TPAK Debug: Saved data type: ' . gettype($saved_data));
+            if (is_string($saved_data)) {
+                error_log('TPAK Debug: Saved data length: ' . strlen($saved_data));
+            }
         }
         
         // ตรวจสอบว่ามีการอัปเดตหรือไม่
