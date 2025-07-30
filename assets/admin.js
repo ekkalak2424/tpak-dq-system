@@ -7,8 +7,12 @@ jQuery(document).ready(function($) {
     
     // ตรวจสอบว่ามี tpak_dq object หรือไม่
     if (typeof tpak_dq === 'undefined') {
+        console.error('TPAK Error: tpak_dq object not found');
         return;
     }
+    
+    console.log('TPAK Debug: JavaScript loaded successfully');
+    console.log('TPAK Debug: tpak_dq object:', tpak_dq);
     
     // Update workflow status - ใช้ event delegation เพื่อรองรับ dynamic content
     $(document).on('click', '.tpak-update-status', function(e) {
@@ -91,11 +95,17 @@ jQuery(document).ready(function($) {
     // Function removed - no longer needed
     
     // Refresh survey structure functionality
-    $(document).on('click', '.tpak-refresh-button', function() {
+    $(document).on('click', '.tpak-refresh-button', function(e) {
+        e.preventDefault();
+        console.log('TPAK Debug: Refresh button clicked');
         var button = $(this);
         var surveyId = button.data('survey-id');
         var postId = button.data('post-id');
         var nonce = button.data('nonce');
+        
+        console.log('TPAK Debug: surveyId:', surveyId);
+        console.log('TPAK Debug: postId:', postId);
+        console.log('TPAK Debug: nonce:', nonce);
         
         button.prop('disabled', true).text('กำลังดึงข้อมูล...');
         
@@ -126,22 +136,34 @@ jQuery(document).ready(function($) {
     });
     
     // Save survey answers functionality
-    $(document).on('click', '.tpak-save-answers', function() {
+    $(document).on('click', '.tpak-save-answers', function(e) {
+        e.preventDefault();
+        console.log('TPAK Debug: Save answers button clicked');
         var button = $(this);
         var postId = button.data('post-id');
         var nonce = button.data('nonce');
         
+        console.log('TPAK Debug: postId:', postId);
+        console.log('TPAK Debug: nonce:', nonce);
+        
         // Collect all form data - เฉพาะ input ที่เป็นคำตอบจริงๆ
         var formData = {};
+        
+        console.log('TPAK Debug: Collecting form data...');
+        console.log('TPAK Debug: Found input elements:', $('.tpak-survey-preview .tpak-answer-input').length);
         
         $('.tpak-survey-preview .tpak-answer-input').each(function() {
             var name = $(this).attr('name');
             var value = $(this).val();
             
+            console.log('TPAK Debug: Input found - name:', name, 'value:', value);
+            
             if (name && value !== undefined) {
                 formData[name] = value;
             }
         });
+        
+        console.log('TPAK Debug: Collected form data:', formData);
         
         button.prop('disabled', true).text('กำลังบันทึก...');
         

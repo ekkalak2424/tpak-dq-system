@@ -37,11 +37,14 @@ class TPAK_DQ_Survey_Renderer {
         // เฉพาะหน้า post.php/post-new.php ของ tpak_verification
         global $post;
         if (($hook === 'post.php' || $hook === 'post-new.php') && isset($post) && $post->post_type === 'tpak_verification') {
-            wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.0', true);
+            wp_enqueue_script('tpak-admin-js', TPAK_DQ_PLUGIN_URL . 'assets/admin.js', array('jquery'), '1.1', true);
             wp_localize_script('tpak-admin-js', 'tpak_dq', array(
                 'nonce' => wp_create_nonce('tpak_dq_nonce'),
                 'ajax_url' => admin_url('admin-ajax.php')
             ));
+            
+            // Debug: ตรวจสอบว่า script ถูกโหลด
+            error_log('TPAK Debug: Admin assets enqueued for post ID: ' . $post->ID);
         }
     }
     
@@ -607,17 +610,18 @@ class TPAK_DQ_Survey_Renderer {
                 ?>
                     
                     <div class="tpak-form-actions">
-                        <button type="button" class="tpak-save-button tpak-save-answers" 
-                                data-post-id="<?php echo $post->ID; ?>" 
-                                data-nonce="<?php echo wp_create_nonce('tpak_save_survey_answers'); ?>">
-                            บันทึกคำตอบ
-                        </button>
+                        <!-- ปุ่มบันทึกถูกย้ายไปส่วนควบคุมด้านบนแล้ว -->
                     </div>
                 </div>
             </div>
         </div>
         
         <!-- JavaScript moved to admin.js to avoid conflicts -->
+        <script>
+        // Debug: ตรวจสอบว่า JavaScript ทำงาน
+        console.log('TPAK Debug: Survey renderer loaded for post ID: <?php echo $post->ID; ?>');
+        console.log('TPAK Debug: tpak_dq object available:', typeof tpak_dq !== 'undefined');
+        </script>
         <?php
     }
     
@@ -667,13 +671,19 @@ class TPAK_DQ_Survey_Renderer {
      * AJAX handler สำหรับบันทึกคำตอบทั้งหมด
      */
     public function ajax_save_survey_answers() {
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: ajax_save_survey_answers called');
+        error_log('TPAK Debug: POST data: ' . print_r($_POST, true));
+        
         // ตรวจสอบ nonce
         if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
+            error_log('TPAK Debug: Nonce check failed');
             wp_send_json_error('Security check failed');
         }
         
         // ตรวจสอบข้อมูลที่จำเป็น
         if (!isset($_POST['post_id']) || !isset($_POST['answers'])) {
+            error_log('TPAK Debug: Missing required data');
             wp_send_json_error('Missing required data');
         }
         
@@ -763,8 +773,13 @@ class TPAK_DQ_Survey_Renderer {
      * AJAX: Refresh Survey Structure
      */
     public function ajax_refresh_survey_structure() {
+        // Debug: ตรวจสอบข้อมูลที่ส่งมา
+        error_log('TPAK Debug: ajax_refresh_survey_structure called');
+        error_log('TPAK Debug: POST data: ' . print_r($_POST, true));
+        
         // Check nonce
         if (!check_ajax_referer('tpak_survey_nonce', 'nonce', false)) {
+            error_log('TPAK Debug: Nonce check failed');
             wp_send_json_error('Security check failed');
         }
         
@@ -772,6 +787,7 @@ class TPAK_DQ_Survey_Renderer {
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
         
         if (!$survey_id || !$post_id) {
+            error_log('TPAK Debug: Invalid parameters');
             wp_send_json_error('Invalid parameters');
         }
         
