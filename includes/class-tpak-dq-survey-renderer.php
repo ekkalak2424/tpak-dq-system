@@ -673,7 +673,10 @@ class TPAK_DQ_Survey_Renderer {
     public function ajax_save_survey_answers() {
         // Debug: ตรวจสอบข้อมูลที่ส่งมา
         error_log('TPAK Debug: ajax_save_survey_answers called');
-        error_log('TPAK Debug: POST data: ' . print_r($_POST, true));
+        error_log('TPAK Debug: POST keys: ' . implode(', ', array_keys($_POST)));
+        if (isset($_POST['answers'])) {
+            error_log('TPAK Debug: Number of answers: ' . count($_POST['answers']));
+        }
         
         // ตรวจสอบ nonce
         if (!wp_verify_nonce($_POST['nonce'], 'tpak_save_survey_answers')) {
@@ -722,11 +725,13 @@ class TPAK_DQ_Survey_Renderer {
         $saved = update_post_meta($post_id, '_tpak_edited_answers', $edited_answers);
         
         // Debug: ตรวจสอบว่าบันทึกสำเร็จหรือไม่
+        error_log('TPAK Debug: Save result: ' . ($saved ? 'success' : 'failed'));
         if (!$saved) {
             wp_send_json_error('ไม่สามารถบันทึกข้อมูลได้');
         }
         
         // ตรวจสอบว่ามีการอัปเดตหรือไม่
+        error_log('TPAK Debug: Updated count: ' . $updated_count);
         if ($updated_count > 0) {
             // อัปเดตสถานะเป็น "แก้ไขแล้ว" เพื่อให้ roles อื่นๆ ทราบ
             $current_status = get_post_meta($post_id, '_tpak_workflow_status', true);
@@ -734,8 +739,10 @@ class TPAK_DQ_Survey_Renderer {
                 update_post_meta($post_id, '_tpak_workflow_status', 'edited');
             }
             
+            error_log('TPAK Debug: Success - saved ' . $updated_count . ' answers');
             wp_send_json_success("บันทึกคำตอบ $updated_count รายการเรียบร้อย");
         } else {
+            error_log('TPAK Debug: No answers to update');
             wp_send_json_success("ไม่มีคำตอบที่ต้องอัปเดต");
         }
     }
@@ -775,7 +782,7 @@ class TPAK_DQ_Survey_Renderer {
     public function ajax_refresh_survey_structure() {
         // Debug: ตรวจสอบข้อมูลที่ส่งมา
         error_log('TPAK Debug: ajax_refresh_survey_structure called');
-        error_log('TPAK Debug: POST data: ' . print_r($_POST, true));
+        error_log('TPAK Debug: POST keys: ' . implode(', ', array_keys($_POST)));
         
         // Check nonce
         if (!check_ajax_referer('tpak_survey_nonce', 'nonce', false)) {
@@ -795,6 +802,7 @@ class TPAK_DQ_Survey_Renderer {
         $structure = $this->fetch_survey_structure($survey_id);
         
         if ($structure) {
+            error_log('TPAK Debug: Structure obtained successfully');
             // Save to post meta for caching
             update_post_meta($post_id, '_tpak_survey_structure', $structure);
             
@@ -806,11 +814,13 @@ class TPAK_DQ_Survey_Renderer {
             $this->render_survey_structure($structure, $response_data);
             $html = ob_get_clean();
             
+            error_log('TPAK Debug: HTML rendered successfully');
             wp_send_json_success(array(
                 'html' => $html,
                 'message' => 'อัพเดทโครงสร้างแบบสอบถามเรียบร้อย'
             ));
         } else {
+            error_log('TPAK Debug: Failed to get structure');
             wp_send_json_error('ไม่สามารถดึงข้อมูลแบบสอบถามได้');
         }
     }
@@ -819,16 +829,24 @@ class TPAK_DQ_Survey_Renderer {
      * ดึงโครงสร้างแบบสอบถามจาก LimeSurvey
      */
     private function fetch_survey_structure($survey_id) {
+        error_log('TPAK Debug: fetch_survey_structure called for survey_id: ' . $survey_id);
+        
         // Initialize API client
         $api_url = get_option('tpak_api_url');
         $username = get_option('tpak_api_username');
         $password = get_option('tpak_api_password');
         
+        error_log('TPAK Debug: API URL: ' . $api_url);
+        error_log('TPAK Debug: Username: ' . $username);
+        error_log('TPAK Debug: Password: ' . ($password ? 'set' : 'not set'));
+        
         if (!$api_url || !$username || !$password) {
+            error_log('TPAK Debug: Missing API credentials');
             return false;
         }
         
         try {
+            error_log('TPAK Debug: Creating API client...');
             // ใช้ไฟล์ backup ถ้าต้องการ
             if (!class_exists('LimeSurveyAPIClient')) {
                 require_once TPAK_DQ_PLUGIN_DIR . 'includes/class-tpak-dq-import.php_backup';
@@ -836,15 +854,21 @@ class TPAK_DQ_Survey_Renderer {
             $this->api_client = new LimeSurveyAPIClient($api_url, $username, $password);
             $session_key = $this->api_client->get_session_key();
             
+            error_log('TPAK Debug: Session key: ' . ($session_key ? 'obtained' : 'failed'));
+            
             if (!$session_key) {
+                error_log('TPAK Debug: Failed to get session key');
                 return false;
             }
             
             // Get survey info
+            error_log('TPAK Debug: Getting survey info...');
             $survey_info = $this->api_client->get_survey_properties($session_key, $survey_id, array('surveyls_title', 'surveyls_description'));
             
             // Get all questions
+            error_log('TPAK Debug: Getting questions...');
             $questions = $this->api_client->list_questions($session_key, $survey_id);
+            error_log('TPAK Debug: Questions count: ' . (is_array($questions) ? count($questions) : 'not array'));
             
             // สร้างโครงสร้างคำถาม
             $structure = array(
@@ -946,6 +970,7 @@ class TPAK_DQ_Survey_Renderer {
             return $structure;
             
         } catch (Exception $e) {
+            error_log('TPAK Debug: Exception in fetch_survey_structure: ' . $e->getMessage());
             return false;
         }
     }
