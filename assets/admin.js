@@ -139,24 +139,31 @@ jQuery(document).ready(function($) {
     $(document).on('click', '.tpak-save-answers', function(e) {
         e.preventDefault();
         console.log('TPAK Debug: Save answers button clicked');
+        console.log('TPAK Debug: Button element:', this);
+        console.log('TPAK Debug: Button class:', $(this).attr('class'));
         var button = $(this);
         var postId = button.data('post-id');
         var nonce = button.data('nonce');
         
         console.log('TPAK Debug: postId:', postId);
         console.log('TPAK Debug: nonce:', nonce);
+        console.log('TPAK Debug: Button data attributes:', button.data());
         
         // Collect all form data - เฉพาะ input ที่เป็นคำตอบจริงๆ
         var formData = {};
         
         console.log('TPAK Debug: Collecting form data...');
         console.log('TPAK Debug: Found input elements:', $('.tpak-survey-preview .tpak-answer-input').length);
+        console.log('TPAK Debug: All input elements:', $('.tpak-survey-preview input').length);
+        console.log('TPAK Debug: All elements with tpak-answer-input class:', $('.tpak-answer-input').length);
         
         $('.tpak-survey-preview .tpak-answer-input').each(function() {
             var name = $(this).attr('name');
             var value = $(this).val();
             
             console.log('TPAK Debug: Input found - name:', name, 'value:', value);
+            console.log('TPAK Debug: Input element:', this);
+            console.log('TPAK Debug: Input attributes:', $(this).attr());
             
             if (name && value !== undefined) {
                 formData[name] = value;
@@ -164,6 +171,13 @@ jQuery(document).ready(function($) {
         });
         
         console.log('TPAK Debug: Collected form data:', formData);
+        console.log('TPAK Debug: Form data count:', Object.keys(formData).length);
+        
+        if (Object.keys(formData).length === 0) {
+            console.error('TPAK Error: No form data collected!');
+            alert('ไม่พบข้อมูลที่จะบันทึก');
+            return;
+        }
         
         button.prop('disabled', true).text('กำลังบันทึก...');
         
@@ -175,6 +189,7 @@ jQuery(document).ready(function($) {
                 answers: formData,
                 nonce: nonce
             });
+        console.log('TPAK Debug: tpak_dq object:', tpak_dq);
         
         $.ajax({
             url: tpak_dq.ajax_url,
